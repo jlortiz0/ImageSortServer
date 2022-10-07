@@ -4,15 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math/rand"
+	"mime"
 	"net/http"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-var dupOpers map[int]chan [][2]string
+var dupOpers map[uint64]chan [][2]string = make(map[uint64]chan [][2]string)
+var dupLock *sync.Mutex = new(sync.Mutex)
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete || r.Method == http.MethodPost {
@@ -80,10 +85,41 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else {
-			// TODO: Filter images based on Accept header
+			accept := r.Header.Get("Accept")
+			allowed := make([]string, 0, 16)
+			for _, x := range strings.Split(accept, ",") {
+				if strings.HasPrefix(x, "image/") || strings.HasPrefix(x, "video/") {
+					ind := strings.LastIndexByte(x, ';')
+					if ind != -1 {
+						x = x[:ind]
+					}
+					tmp, _ := mime.ExtensionsByType(x)
+					allowed = append(allowed, tmp...)
+				}
+			}
+			sort.Strings(allowed)
+			for _, v := range fList {
+				if !v.IsDir() {
+					ind := strings.LastIndexByte(v.Name(), '.')
+					if ind == -1 {
+						continue
+					}
+					ext := v.Name()[ind:]
+					_, ok := sort.Find(len(allowed), func(i int) int {
+						return strings.Compare(ext, allowed[i])
+					})
+					if ok {
+						dList = append(dList, v.Name())
+					}
+				}
+			}
 		}
-		d, _ := json.Marshal(dList)
-		writeAll(w, d)
+		if len(dList) == 0 && len(fList) != 0 {
+			w.WriteHeader(http.StatusNotAcceptable)
+		} else {
+			d, _ := json.Marshal(dList)
+			writeAll(w, d)
+		}
 	case "info":
 		if r.Method != http.MethodGet {
 			w.Header().Add("Allow", "GET")
@@ -108,7 +144,40 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	case "dedup":
-		// TODO: retrieve from a token
+		if r.Method != http.MethodGet {
+			w.Header().Add("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		tk := r.URL.Query().Get("token")
+		if tk != "" {
+			token, err := strconv.ParseUint(tk, 16, 64)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				writeAll(w, []byte("invalid token"))
+				return
+			}
+			dupLock.Lock()
+			ch, ok := dupOpers[token]
+			dupLock.Unlock()
+			if !ok {
+				w.WriteHeader(http.StatusBadRequest)
+				writeAll(w, []byte("unknown token"))
+				return
+			}
+			select {
+			case v := <-ch:
+				d, _ := json.Marshal(v)
+				dupLock.Lock()
+				delete(dupOpers, token)
+				dupLock.Unlock()
+				writeAll(w, d)
+			default:
+				w.WriteHeader(http.StatusAccepted)
+				writeAll(w, []byte(strconv.FormatUint(token, 16)))
+			}
+			return
+		}
 		var ls []string
 		if len(url) > 1 {
 			ls = getDedupList(rootDir + path.Join(url[1:]...))
@@ -135,11 +204,22 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		ch := make(chan [][2]string, 1)
 		go func() {
 			ch <- initDiff(rootDir, ls, path.Join(url[1:]...))
+			close(ch)
 		}()
 		t := time.NewTicker(time.Second * 5)
 		select {
 		case <-t.C:
-			// TODO: Generate and send token with 202
+			var token uint64
+			ok := true
+			dupLock.Lock()
+			for ok {
+				token = uint64(rand.Int63())
+				_, ok = dupOpers[token]
+			}
+			dupOpers[token] = ch
+			dupLock.Unlock()
+			w.WriteHeader(http.StatusAccepted)
+			writeAll(w, []byte(strconv.FormatUint(token, 16)))
 		case v := <-ch:
 			d, _ := json.Marshal(v)
 			writeAll(w, d)
