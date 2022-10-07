@@ -36,6 +36,10 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		url = url[2:]
 	}
+	if len(url) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	switch url[0] {
 	case "list":
 		if r.Method != http.MethodGet {
@@ -88,6 +92,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+			dList = append(dList, "Sort", "Trash")
 		} else {
 			accept := r.Header.Get("Accept")
 			allowed := make([]string, 0, 16)
@@ -186,7 +191,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		var ls []string
 		if len(url) > 1 {
-			ls = getDedupList(rootDir + path.Join(url[1:]...))
+			ls = getDedupList(path.Join(rootDir, path.Join(url[1:]...)))
 		} else {
 			f, err := os.Open(rootDir)
 			if err != nil {
@@ -200,7 +205,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			for _, fldr := range entries {
 				name := fldr.Name()
 				if fldr.IsDir() && name != "Trash" && name[0] != '.' && name[0] != '$' {
-					for _, x := range getDedupList(rootDir + fldr.Name()) {
+					for _, x := range getDedupList(path.Join(rootDir, fldr.Name())) {
 						ls = append(ls, path.Join(name, x))
 					}
 				}
@@ -259,6 +264,5 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		w.WriteHeader(http.StatusNotFound)
-		return
 	}
 }

@@ -18,13 +18,15 @@ var rootDir string = defaultRootDir
 func main() {
 	// TODO: flags
 	loadHashes()
+	loadSettings()
 	hndlr := http.NewServeMux()
-	hndlr.HandleFunc("/api/1", apiHandler)
-	hndlr.Handle("/api", http.NotFoundHandler())
-	hndlr.Handle("/www", NewFileReadOnlyHandler(path.Join(rootDir, "www")))
+	hndlr.HandleFunc("/api/1/", apiHandler)
+	hndlr.Handle("/api/", http.NotFoundHandler())
+	hndlr.Handle("/www/", NewFileReadOnlyHandler(path.Join(rootDir, "www")))
 	hndlr.Handle("/index.html", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/index.htm", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/index", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
+	hndlr.Handle("/favicon.ico", NewSpecificFileHandler("photostack.ico"))
 	hndlr.Handle("/", NewImageSortRootMount(rootDir))
 	_, err := os.Stat(path.Join(rootDir, "Sort"))
 	if err != nil {
@@ -73,5 +75,5 @@ const (
 var operStrings []string = []string{"create", "remove", "recursive remove", "open", "close", "stat", "read", "write", "marshall", "move", "copy"}
 
 func logError(err error, op OperationTypes, path string) {
-	log.Printf("[%s ERROR] error %s %s: %s\n", time.Now().Format(time.Stamp), operStrings[op], path, err.Error())
+	log.Printf("[ERROR] error %s %s: %s\n", operStrings[op], path, err.Error())
 }

@@ -106,7 +106,7 @@ func initDiff(rootDir string, ls []string, fldr string) [][2]string {
 }
 
 func loadHashes() error {
-	f, err := os.Open("imgSort.cache")
+	f, err := os.Open(path.Join(rootDir, "imgSort.cache"))
 	if err != nil && os.IsExist(err) {
 		return err
 	} else if os.IsNotExist(err) {
@@ -156,7 +156,7 @@ func loadHashes() error {
 }
 
 func saveHashes() error {
-	f, err := os.OpenFile("imgSort.cache", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(path.Join(rootDir, "imgSort.cache"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
