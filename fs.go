@@ -1,15 +1,17 @@
 package main
 
 import (
+	"compress/flate"
 	"errors"
+	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/microsoftarchive/ttlcache"
 )
 
 type FileReadOnlyHandler string
@@ -30,8 +32,8 @@ func NewSpecificFileHandler(path string) http.Handler {
 }
 
 func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Add("Allow", "GET")
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Add("Allow", "GET, HEAD")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -52,6 +54,22 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeAll(w, []byte(err.Error()))
 		return
 	}
+	compress := false
+	ind := strings.LastIndexByte(string(h), '.')
+	if ind != -1 {
+		mtype := mime.TypeByExtension(string(h)[ind:])
+		if mtype != "" {
+			w.Header().Add("Content-Type", mtype)
+			if strings.HasPrefix(mtype, "text/") {
+				if strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
+					compress = true
+					w.Header().Add("Content-Type", "deflate")
+				}
+			}
+		}
+	}
+	w.Header().Add("Cache-Control", "public, max-age=604800")
+	w.Header().Add("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	w.Header().Add("Last-Modified", stat.ModTime().UTC().Format(time.RFC1123))
 	modSince := r.Header.Get("If-Modified-Since")
 	if modSince != "" {
@@ -65,20 +83,28 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	_, err = io.Copy(w, f)
-	if err != nil {
-		logError(err, OP_COPY, string(h)+"-http")
+	if r.Method == http.MethodGet {
+		if compress {
+			w2, _ := flate.NewWriter(w, flate.DefaultCompression)
+			_, err = io.Copy(w2, f)
+			if err == nil {
+				err = w2.Flush()
+			}
+		} else {
+			_, err = io.Copy(w, f)
+		}
+		if err != nil {
+			logError(err, OP_COPY, string(h)+"-http")
+		}
 	}
 }
 
 type ImageSortRootMount struct {
-	*ttlcache.Cache
 	rootDir string
 }
 
 func NewImageSortRootMount(path string) http.Handler {
-	cache := ttlcache.NewCache(time.Minute * 10)
-	return ImageSortRootMount{cache, path}
+	return ImageSortRootMount{path}
 }
 
 func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -88,20 +114,6 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	loc := path.Join(i.rootDir, r.URL.Path)
 	switch r.Method {
 	case http.MethodGet:
-		ind := strings.IndexByte(r.URL.Path, os.PathSeparator)
-		for ind != -1 {
-			redirect, ok := i.Get(r.URL.Path[:ind])
-			if ok {
-				w.Header().Add("Location", path.Join(redirect, r.URL.Path[ind+1:]))
-				w.WriteHeader(http.StatusMovedPermanently)
-				return
-			}
-			ind2 := strings.IndexByte(r.URL.Path[ind+1:], os.PathSeparator)
-			if ind2 == -1 {
-				break
-			}
-			ind += ind2
-		}
 		SpecificFileHandler(loc).ServeHTTP(w, r)
 	case http.MethodPost:
 		targetB, err := io.ReadAll(r.Body)
@@ -140,25 +152,43 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					writeAll(w, []byte(err.Error()))
 					logError(err, OP_MOVE, loc+" "+target)
 				} else {
-					i.Set(r.URL.Path, string(targetB))
 					w.Header().Add("Location", target)
 					w.WriteHeader(http.StatusCreated)
 				}
 			}
 		} else {
-			if !stat2.IsDir() {
+			if err != nil || !stat2.IsDir() {
 				w.WriteHeader(http.StatusConflict)
 				writeAll(w, []byte("not a directory"))
 				return
 			}
 			// TODO: Name conflict resolution
-			os.Rename(loc, target)
+			base := path.Base(loc)
+			ext := base[strings.LastIndexByte(base, '.'):]
+			base = base[:len(base)-len(ext)]
+			_, err = os.Stat(path.Join(target, base))
+			j := -1
+			for err == nil || !errors.Is(err, os.ErrNotExist) {
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					writeAll(w, []byte(err.Error()))
+					logError(err, OP_MOVE, loc+" "+target)
+					return
+				}
+				j++
+				_, err = os.Stat(fmt.Sprintf("%s%c%s_%d%s", target, os.PathSeparator, base, j, ext))
+			}
+			if j == -1 {
+				target = path.Join(string(targetB), path.Base(loc))
+			} else {
+				target = fmt.Sprintf("%s%c%s_%d%s", string(targetB), os.PathSeparator, base, j, ext)
+			}
+			err = os.Rename(loc, path.Join(i.rootDir, target))
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				writeAll(w, []byte(err.Error()))
 				logError(err, OP_MOVE, loc+" "+target)
 			} else {
-				i.Set(r.URL.Path, string(targetB))
 				w.Header().Add("Location", target)
 				w.WriteHeader(http.StatusCreated)
 			}
