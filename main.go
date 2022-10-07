@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,17 +17,19 @@ const defaultRootDir = "jlortiz_TEST"
 var rootDir string = defaultRootDir
 
 func main() {
+	rand.Seed(time.Now().Unix())
 	// TODO: flags
 	loadHashes()
 	loadSettings()
 	hndlr := http.NewServeMux()
+	hndlr.Handle("/login-test", NewAuthRequired(http.NotFoundHandler()))
 	hndlr.HandleFunc("/api/1/", apiHandler)
 	hndlr.Handle("/api/", http.NotFoundHandler())
-	hndlr.Handle("/www/", NewFileReadOnlyHandler(path.Join(rootDir, "www")))
+	hndlr.Handle("/www/", NewFileReadOnlyHandler("www"))
 	hndlr.Handle("/index.html", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/index.htm", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/index", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
-	hndlr.Handle("/favicon.ico", NewSpecificFileHandler("photostack.ico"))
+	hndlr.Handle("/favicon.ico", NewSpecificFileHandler("www/favicon.ico"))
 	hndlr.Handle("/", NewImageSortRootMount(rootDir))
 	_, err := os.Stat(path.Join(rootDir, "Sort"))
 	if err != nil {

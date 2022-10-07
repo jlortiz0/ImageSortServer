@@ -1,4 +1,5 @@
-jlortiz_TEST/**
+root/**
+www/favicon.ico
 *.exe
 *.log
 *.bak
