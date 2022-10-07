@@ -18,55 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"bufio"
 	"errors"
 	"image"
 	"io"
-	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 )
-
-type ffmpegReader struct {
-	*exec.Cmd
-	h, w         int32
-	bytesToRead  int32
-	stdoutCloser func() error
-	bufReader    *bufio.Reader
-}
-
-func newFfmpegReader(path string) *ffmpegReader {
-	ffmpeg := new(ffmpegReader)
-	ffmpeg.Cmd = exec.Command("ffmpeg", "-stream_loop", "-1", "-i", path, "-r", "30",
-		"-pix_fmt", "rgb24", "-vcodec", "rawvideo", "-f", "image2pipe", "-loglevel", "warning", "pipe:1")
-	f, err := ffmpeg.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
-	ffmpeg.Stderr = os.Stderr
-	ffmpeg.stdoutCloser = f.Close
-	ffmpeg.bufReader = bufio.NewReader(f)
-	ffmpeg.h, ffmpeg.w = ffprobeFile(path)
-	ffmpeg.bytesToRead = ffmpeg.h * ffmpeg.w * 3
-	ffmpeg.Start()
-	return ffmpeg
-}
-
-func (ffmpeg *ffmpegReader) Destroy() error {
-	ffmpeg.stdoutCloser()
-	err := ffmpeg.Process.Kill()
-	if err != nil {
-		return err
-	}
-	return ffmpeg.Wait()
-}
-
-func (ffmpeg *ffmpegReader) Read() ([]byte, error) {
-	arr := make([]byte, ffmpeg.bytesToRead)
-	_, err := io.ReadFull(ffmpeg.bufReader, arr)
-	return arr, err
-}
 
 var ffprobeRegex *regexp.Regexp = regexp.MustCompile(`Video: [^,]+, [^,].+, (\d+)x(\d+)`)
 

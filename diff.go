@@ -24,6 +24,8 @@ import (
 	"image"
 	"io"
 	"os"
+	"path"
+	"sort"
 	"strings"
 
 	"github.com/devedge/imagehash"
@@ -39,13 +41,55 @@ type hashEntry struct {
 	modTime int64
 }
 
-func initDiff(ls []string, fldr string) [][2]string {
+// If cap is 0, the folder really was empty
+func getDedupList(fldr string) []string {
+	f, err := os.Open(fldr)
+	if err != nil {
+		panic(err)
+	}
+	entries, err := f.ReadDir(0)
+	if err != nil {
+		panic(err)
+	}
+	ls := make([]string, 0, len(entries))
+	for _, v := range entries {
+		if !v.IsDir() {
+			ind := strings.LastIndexByte(v.Name(), '.')
+			if ind == -1 {
+				continue
+			}
+			switch strings.ToLower(v.Name()[ind+1:]) {
+			case "mp4":
+				fallthrough
+			case "webm":
+				fallthrough
+			case "gif":
+				fallthrough
+			case "mov":
+				fallthrough
+			case "bmp":
+				fallthrough
+			case "jpg":
+				fallthrough
+			case "png":
+				fallthrough
+			case "jpeg":
+				ls = append(ls, v.Name())
+			}
+		}
+	}
+	f.Close()
+	sort.Strings(ls)
+	return ls
+}
+
+func initDiff(rootDir string, ls []string, fldr string) [][2]string {
 	diffLs := make([][]byte, len(ls))
 	for k, v := range ls {
 		if fldr == "" {
-			diffLs[k] = getHash(v)
+			diffLs[k] = getHash(path.Join(rootDir, v))
 		} else {
-			diffLs[k] = getHash(fldr + string(os.PathSeparator) + v)
+			diffLs[k] = getHash(path.Join(rootDir, fldr, v))
 		}
 	}
 	diffList := make([][2]string, len(diffLs)/32)
