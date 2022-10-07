@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -95,7 +94,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			dList = append(dList, "Sort", "Trash")
 		} else {
 			accept := r.Header.Get("Accept")
-			allowed := make([]string, 0, 16)
+			allowed := make(map[string]bool, 16)
 			for _, x := range strings.Split(accept, ",") {
 				if strings.HasPrefix(x, "image/") || strings.HasPrefix(x, "video/") {
 					ind := strings.LastIndexByte(x, ';')
@@ -103,10 +102,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 						x = x[:ind]
 					}
 					tmp, _ := mime.ExtensionsByType(x)
-					allowed = append(allowed, tmp...)
+					for _, x2 := range tmp {
+						allowed[x2] = true
+					}
 				}
 			}
-			sort.Strings(allowed)
 			for _, v := range fList {
 				if !v.IsDir() {
 					ind := strings.LastIndexByte(v.Name(), '.')
@@ -114,10 +114,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 						continue
 					}
 					ext := v.Name()[ind:]
-					_, ok := sort.Find(len(allowed), func(i int) int {
-						return strings.Compare(ext, allowed[i])
-					})
-					if ok {
+					if allowed[ext] {
 						dList = append(dList, v.Name())
 					}
 				}
