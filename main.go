@@ -19,12 +19,13 @@ func main() {
 	// TODO: flags
 	loadHashes()
 	hndlr := http.NewServeMux()
-	// rootDir = defaultRootDir
 	hndlr.HandleFunc("/api/1", apiHandler)
 	hndlr.Handle("/api", http.NotFoundHandler())
-	// TODO: Custom file server that handles renames and bars PUT
-	// Also mount www somewhere as a GET only file server
-	hndlr.Handle("/", http.FileServer(http.Dir(rootDir)))
+	hndlr.Handle("/www", NewFileReadOnlyHandler(path.Join(rootDir, "www")))
+	hndlr.Handle("/index.html", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
+	hndlr.Handle("/index.htm", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
+	hndlr.Handle("/index", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
+	hndlr.Handle("/", NewImageSortRootMount(rootDir))
 	_, err := os.Stat(path.Join(rootDir, "Sort"))
 	if err != nil {
 		os.Mkdir(path.Join(rootDir, "Sort"), 0600)
