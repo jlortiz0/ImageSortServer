@@ -26,7 +26,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodPut {
-		w.Header().Add("Allow", "GET, PUT, DELETE, POST")
+		w.Header().Add("Allow", "GET, PUT, DELETE, POST, CREATE")
 		w.WriteHeader(http.StatusNotImplemented)
 		return
 	}
@@ -46,13 +46,15 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if len(url) == 1 {
 			url = append(url, ".")
 		}
-		f, err := os.Open(rootDir + path.Join(url[1:]...))
+		loc := path.Join(rootDir, path.Join(url[1:]...))
+		f, err := os.Open(loc)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
+				writeAll(w, []byte(err.Error()))
+				logError(err, OP_OPEN, loc)
 			}
 			return
 		}
@@ -60,17 +62,19 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			writeAll(w, []byte(err.Error()))
+			logError(err, OP_STAT, loc)
 			return
 		}
 		if !stat.IsDir() {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("not a directory"))
+			writeAll(w, []byte("not a directory"))
 			return
 		}
 		fList, _ := f.ReadDir(0)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			writeAll(w, []byte(err.Error()))
+			logError(err, OP_READ, loc)
 			return
 		}
 		f.Close()
@@ -125,13 +129,15 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		} else if len(url) > 1 {
-			stat, err := os.Stat(rootDir + strings.Join(url[1:], ","))
+			loc := path.Join(rootDir, path.Join(url[1:]...))
+			stat, err := os.Stat(loc)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					w.WriteHeader(http.StatusNotFound)
 				} else {
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(err.Error()))
+					writeAll(w, []byte(err.Error()))
+					logError(err, OP_STAT, loc)
 				}
 				return
 			}
@@ -235,6 +241,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				writeAll(w, []byte(err.Error()))
+				logError(err, OP_READ, "http")
 				return
 			}
 			// TODO: Sanity check, return 422 if failed
@@ -242,7 +249,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			err = json.Unmarshal(data, &config)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(err.Error()))
+				writeAll(w, []byte(err.Error()))
 			} else {
 				w.WriteHeader(http.StatusNoContent)
 			}
