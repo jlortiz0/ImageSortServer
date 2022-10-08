@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html style="height: 100%; width:100%">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ImageSort</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+
+<body class="w3-dark-gray">
+    <div class="w3-sidebar w3-bar-block w3-animate-left w3-black w3-text-white" style="width:10vw;z-index:2"
+        id="sidebar">
+        <div class="w3-bar-item w3-cell w3-cell-top">
+            <span style="font-size: large;">Folders</span>
+            <button onclick="javascript:sidebar_close()" class="w3-circle w3-red">&times;</button>
+        </div>
+        <hr style="margin-top: 5px; margin-bottom: 5px;">
+        <ul class="w3-ul">
+            <li class="w3-hover-dark-gray">1</li>
+            <li class="w3-hover-dark-gray">1</li>
+            <li class="w3-hover-dark-gray">1</li>
+        </ul>
+    </div>
+    <div class="w3-black" style="height:7.5vh">
+        <button class="w3-button w3-gray w3-left" style="height:7.5vh" onclick="sidebar_open()">
+            <img src="favicon.ico" width="32" height="32" />
+        </button>
+        <button class="w3-button w3-gray w3-right" style="height:7.5vh">D</button>
+        <button class="w3-button w3-gray w3-right" style="height:7.5vh">S</button>
+        <button class="w3-button w3-gray w3-right" style="height:7.5vh">I</button>
+        <button class="w3-button w3-gray w3-right" disabled="true" style="height:7.5vh">O</button>
+        <h1 style="text-align:center;margin-top:0">ImageSort</h1>
+    </div>
+    <div class="w3-container">
+        <button class="w3-btn w3-display-left w3-white" style="z-index:1">&lt;</button>
+        <button class="w3-btn w3-display-right w3-white" style="z-index:1">&gt;</button>
+        <span class="w3-text-black w3-white" style="z-index:1;position:fixed;left:0;bottom: 0;">???x???</span>
+        <span class="w3-text-black w3-white" style="z-index:1;position:fixed;right:0;bottom: 0;">???/???</span>
+        <div class="w3-card">
+            <span onclick="document.getElementById('imageModal').style.display = 'block'">
+                <img style="object-fit:contain;width:100%;height:100%;max-height: 92.5vh;" src="flight.jpg" />
+            </span>
+        </div>
+    </div>
+
+    <div class="w3-modal w3-animate-zoom" onclick="this.style.display='none'" id="imageModal"
+        style="z-index:3;height:90vh;width:90vw;overflow: auto;margin: 5vh 5vw;padding: 0">
+        <img style="overflow: auto" src="flight.jpg" />
+    </div>
+
+    <script>
+        function sidebar_open() {
+            document.getElementById("sidebar").style.display = "block";
+        }
+
+        function sidebar_close() {
+            document.getElementById("sidebar").style.display = "none";
+        }
+    </script>
+</body>
+
+</html>
