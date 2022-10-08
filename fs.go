@@ -183,13 +183,14 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				target = fmt.Sprintf("%s%c%s_%d%s", string(targetB), os.PathSeparator, base, j, ext)
 			}
+			// TODO: update hashes
 			err = os.Rename(loc, path.Join(i.rootDir, target))
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				writeAll(w, []byte(err.Error()))
 				logError(err, OP_MOVE, loc+" "+target)
 			} else {
-				w.Header().Add("Location", target)
+				w.Header().Add("Location", "/"+target)
 				w.WriteHeader(http.StatusCreated)
 			}
 		}

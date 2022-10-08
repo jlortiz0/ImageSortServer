@@ -4,3 +4,4 @@ www/favicon.ico
 *.log
 *.bak
 .vscode/**
+www/icon.png

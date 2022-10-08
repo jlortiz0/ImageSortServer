@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const defaultRootDir = "jlortiz_TEST"
+const defaultRootDir = "root"
 
 var rootDir string = defaultRootDir
 
