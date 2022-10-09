@@ -25,7 +25,7 @@ func main() {
 	hndlr.Handle("/login-test", NewAuthRequired(http.NotFoundHandler()))
 	hndlr.HandleFunc("/api/1/", apiHandler)
 	hndlr.Handle("/api/", http.NotFoundHandler())
-	hndlr.Handle("/www/", NewFileReadOnlyHandler("www"))
+	hndlr.Handle("/www/", NewFileReadOnlyHandler("www", 1))
 	hndlr.Handle("/index.html", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/index.htm", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/index", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))

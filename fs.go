@@ -14,14 +14,25 @@ import (
 	"time"
 )
 
-type FileReadOnlyHandler string
+type FileReadOnlyHandler struct {
+	rootDir string
+	strip   int
+}
 
-func NewFileReadOnlyHandler(rootDir string) http.Handler {
-	return FileReadOnlyHandler(rootDir)
+func NewFileReadOnlyHandler(rootDir string, strip int) http.Handler {
+	return FileReadOnlyHandler{rootDir, strip}
 }
 
 func (h FileReadOnlyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	loc := path.Join(string(h), r.URL.Path)
+	p := r.URL.Path
+	if p[0] == '/' {
+		p = p[1:]
+	}
+	if h.strip != 0 {
+		tmp := strings.SplitAfterN(p, "/", h.strip+1)
+		p = tmp[len(tmp)-1]
+	}
+	loc := path.Join(h.rootDir, p)
 	SpecificFileHandler(loc).ServeHTTP(w, r)
 }
 
@@ -54,6 +65,10 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeAll(w, []byte(err.Error()))
 		return
 	}
+	if stat.IsDir() {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	compress := false
 	ind := strings.LastIndexByte(string(h), '.')
 	if ind != -1 {
@@ -63,7 +78,7 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(mtype, "text/") {
 				if strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
 					compress = true
-					w.Header().Add("Content-Type", "deflate")
+					w.Header().Add("Content-Encoding", "deflate")
 				}
 			}
 		}
@@ -110,6 +125,11 @@ func NewImageSortRootMount(path string) http.Handler {
 func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path[0] == '/' {
 		r.URL.Path = r.URL.Path[1:]
+	}
+	if r.URL.Path == "" {
+		w.Header().Add("Location", "index.html")
+		w.WriteHeader(http.StatusMovedPermanently)
+		return
 	}
 	loc := path.Join(i.rootDir, r.URL.Path)
 	switch r.Method {
