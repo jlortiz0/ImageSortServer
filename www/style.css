@@ -1,0 +1,128 @@
+:root {
+    --titlebar-height: 6vh;
+}
+
+html {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+#sidebar {
+    width: 10vw;
+    z-index: 2;
+}
+
+.sidebar-title {
+    font-size: large;
+}
+
+hr {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.title-bar {
+    height: var(--titlebar-height);
+    z-index: 1;
+}
+
+.title-text {
+    z-index: 1;
+    text-align: center;
+    margin-top: 0;
+    overflow: hidden;
+}
+
+.ui-layer2 {
+    z-index: 1;
+}
+
+#indLabel,
+#dimLabel {
+    position: fixed;
+    bottom: 0;
+}
+
+#indLabel {
+    right: 0;
+}
+
+#dimLabel {
+    left: 0;
+}
+
+#smallImg {
+    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    max-height: calc(100vh - var(--titlebar-height));
+    position: relative;
+    z-index: -1;
+}
+
+#bigImg {
+    overflow: auto;
+}
+
+#imageModal {
+    z-index: 3;
+    height: 90vh;
+    width: 90vw;
+    overflow: auto;
+    margin: 5vh 5vw;
+    padding: 0
+}
+
+#container {
+    padding: 0.01em 0;
+}
+
+#infoModal>div,
+#errorModal>div {
+    padding: 0.5em;
+    width: auto;
+    text-align: center;
+}
+
+.w3-modal>div>p {
+    margin: 5px 0;
+}
+
+#smallImg.animDown {
+    position: relative;
+    animation-name: down;
+    animation-duration: 0.5s;
+    overflow: hidden;
+    top: 100vh;
+}
+
+@keyframes down {
+    from {
+        top: 0;
+    }
+
+    to {
+        top: 100vh;
+    }
+}
+
+#smallImg.animUp {
+    position: relative;
+    animation-name: up;
+    animation-duration: 0.5s;
+    overflow: hidden;
+    bottom: 100vh;
+}
+
+@keyframes up {
+    from {
+        bottom: 0;
+        z-index: -1;
+    }
+
+    to {
+        bottom: 100vh;
+        z-index: -1;
+    }
+}
