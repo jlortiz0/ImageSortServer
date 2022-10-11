@@ -13,17 +13,16 @@
     <div class="w3-sidebar w3-bar-block w3-animate-left w3-black w3-text-white" id="sidebar">
         <div class="w3-bar-item w3-cell w3-cell-top">
             <span class="sidebar-title">Folders</span>
-            <button onclick="javascript:sidebar_close()" class="w3-circle w3-red">&times;</button>
+            <button onclick="document.getElementById('sidebar').style.display = 'none'" class="w3-circle w3-red"
+                aria->&times;</button>
         </div>
         <hr>
-        <ul class="w3-ul">
-            <li class="w3-hover-dark-gray">1</li>
-            <li class="w3-hover-dark-gray">1</li>
-            <li class="w3-hover-dark-gray">1</li>
+        <ul class="w3-ul" id="folderMenuMountPoint">
         </ul>
     </div>
     <div class="w3-black title-bar">
-        <button class="w3-button w3-gray w3-left title-bar" onclick="sidebar_open()">
+        <button class="w3-button w3-gray w3-left title-bar"
+            onclick="document.getElementById('sidebar').style.display = 'block'">
             <img src="favicon.ico" width="32" height="32" />
         </button>
         <button class="w3-button w3-gray w3-right title-bar"
@@ -66,15 +65,12 @@
         </div>
     </div>
 
-    <script>
-        function sidebar_open() {
-            document.getElementById("sidebar").style.display = "block";
-        }
+    <div id="reactRoot"></div>
 
-        function sidebar_close() {
-            document.getElementById("sidebar").style.display = "none";
-        }
-    </script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="index.js" type="text/babel"></script>
 </body>
 
 </html>
