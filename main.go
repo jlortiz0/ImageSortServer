@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ var rootDir string = defaultRootDir
 
 func main() {
 	rand.Seed(time.Now().Unix())
+	mime.AddExtensionType(".webm", "video/webm")
 	// TODO: flags
 	loadHashes()
 	loadSettings()

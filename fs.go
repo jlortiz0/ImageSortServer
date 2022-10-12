@@ -111,6 +111,8 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logError(err, OP_COPY, string(h)+"-http")
 		}
+	} else {
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -133,6 +135,8 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	loc := path.Join(i.rootDir, r.URL.Path)
 	switch r.Method {
+	case http.MethodHead:
+		fallthrough
 	case http.MethodGet:
 		SpecificFileHandler(loc).ServeHTTP(w, r)
 	case http.MethodPost:
@@ -278,7 +282,7 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		}
 	default:
-		w.Header().Add("Allow", "DELETE, POST, GET, CREATE")
+		w.Header().Add("Allow", "DELETE, POST, GET, CREATE, HEAD")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }

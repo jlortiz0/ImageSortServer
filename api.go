@@ -114,7 +114,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 					if ind == -1 {
 						continue
 					}
-					ext := v.Name()[ind:]
+					ext := strings.ToLower(v.Name()[ind:])
 					if allowed[ext] {
 						dList = append(dList, v.Name())
 					}
