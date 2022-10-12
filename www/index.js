@@ -117,6 +117,7 @@ class GodObject extends React.Component {
                 flags: flagsEnum.loadingFldr,
             });
             this.populateFileList(this.state.folders[i]);
+            document.getElementById('title-text').innerText = this.state.folders[i];
         }
         document.getElementById('sidebar').style.display = 'none';
     }
@@ -207,7 +208,7 @@ class GodObject extends React.Component {
         this.setState({
             listing: newLs,
         });
-        this.addToInd(this.state.lastMoveLeft ? -1 : 0);
+        setTimeout(() => this.addToInd(this.state.lastMoveLeft ? -1 : 0), 20);
     }
 
     moveCur(loc) {
@@ -221,7 +222,7 @@ class GodObject extends React.Component {
         this.setState({
             listing: newLs,
         });
-        this.addToInd(this.state.lastMoveLeft ? -1 : 0);
+        setTimeout(() => this.addToInd(this.state.lastMoveLeft ? -1 : 0), 20);
     }
 
     // TODO: diff mode

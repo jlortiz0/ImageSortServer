@@ -1,7 +1,5 @@
 root/**
-www/favicon.ico
 *.exe
 *.log
 *.bak
 .vscode/**
-www/icon.png
