@@ -20,25 +20,16 @@
         <ul class="w3-ul" id="folderMenuMountPoint">
         </ul>
     </div>
-    <div class="w3-black title-bar">
+    <div class="w3-black title-bar" id="titleBar">
         <button class="w3-button w3-gray w3-left title-bar"
             onclick="document.getElementById('sidebar').style.display = 'block'">
             <img src="favicon.ico" width="32" height="32" />
         </button>
-        <button class="w3-button w3-gray w3-right title-bar"
-            onclick="document.getElementById('smallImg').classList.add('animDown')">D</button>
-        <button class="w3-button w3-gray w3-right title-bar"
-            onclick="document.getElementById('smallImg').classList.add('animUp')">S</button>
-        <button class="w3-button w3-gray w3-right title-bar"
-            onclick="document.getElementById('infoModal').style.display = 'block'">I</button>
-        <button class="w3-button w3-gray w3-right title-bar" disabled="true">O</button>
+        <div id="buttonsMountPoint"></div>
         <h2 class="title-bar title-text">ImageSort</h2>
     </div>
     <div class="w3-container" id="container">
-        <button class="w3-btn w3-display-left w3-white ui-layer2">&lt;</button>
-        <button class="w3-btn w3-display-right w3-white ui-layer2">&gt;</button>
-        <span class="w3-text-black w3-white ui-layer2" id="dimLabel">???x???</span>
-        <span class="w3-text-black w3-white ui-layer2" id="indLabel">???/???</span>
+        <div id="lrButtonsMountPoint"></div>
         <div class="w3-card">
             <span onclick="document.getElementById('imageModal').style.display = 'block'" id="smallImgWrapper">
             </span>
@@ -49,11 +40,6 @@
     </div>
 
     <div class="w3-modal w3-animate-opacity" onclick="this.style.display='none'" id="infoModal">
-        <div class="w3-modal-content w3-white w3-display-middle">
-            <!-- <p>Image: flight.jpg</p>
-            <p>Storage: ??? MiB</p>
-            <p>Should I put scale dimensions here?</p> -->
-        </div>
     </div>
 
     <div class="w3-modal" id="errorModal">

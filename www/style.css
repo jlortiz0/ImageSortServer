@@ -57,12 +57,18 @@ hr {
     width: 100%;
     height: 100%;
     max-height: calc(100vh - var(--titlebar-height));
-    position: relative;
+    position: absolute;
     z-index: -1;
 }
 
 #bigImg {
     overflow: auto;
+    position: absolute;
+    margin: auto;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 
 #imageModal {
