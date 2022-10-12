@@ -126,3 +126,9 @@ hr {
         z-index: -1;
     }
 }
+
+#smallImgWrapper {
+    display: block;
+    height: auto;
+    width: auto;
+}

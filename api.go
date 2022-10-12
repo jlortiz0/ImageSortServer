@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/flate"
 	"encoding/json"
 	"errors"
 	"io"
@@ -120,13 +121,21 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		w.Header().Add("Content-Type", "application/json")
 		if len(dList) == 0 && len(fList) != 0 {
 			w.WriteHeader(http.StatusNotAcceptable)
+		}
+		d, _ := json.Marshal(dList)
+		if len(d) > 4096 {
+			w.Header().Add("Content-Encoding", "deflate")
+			w2, _ := flate.NewWriter(w, flate.DefaultCompression)
+			writeAll(w2, d)
+			w2.Flush()
 		} else {
-			d, _ := json.Marshal(dList)
 			writeAll(w, d)
 		}
 	case "info":
+		// TODO: Something, anything?
 		if r.Method != http.MethodGet {
 			w.Header().Add("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -179,7 +188,15 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				dupLock.Lock()
 				delete(dupOpers, token)
 				dupLock.Unlock()
-				writeAll(w, d)
+				w.Header().Add("Content-Type", "application/json")
+				if len(d) > 4096 {
+					w.Header().Add("Content-Encoding", "deflate")
+					w2, _ := flate.NewWriter(w, flate.DefaultCompression)
+					writeAll(w2, d)
+					w2.Flush()
+				} else {
+					writeAll(w, d)
+				}
 			default:
 				w.WriteHeader(http.StatusAccepted)
 				writeAll(w, []byte(strconv.FormatUint(token, 16)))
@@ -230,14 +247,29 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			writeAll(w, []byte(strconv.FormatUint(token, 16)))
 		case v := <-ch:
 			d, _ := json.Marshal(v)
-			writeAll(w, d)
+			if len(d) > 4096 {
+				w.Header().Add("Content-Encoding", "deflate")
+				w2, _ := flate.NewWriter(w, flate.DefaultCompression)
+				writeAll(w2, d)
+				w2.Flush()
+			} else {
+				writeAll(w, d)
+			}
 		}
 		t.Stop()
 	case "settings":
 		switch r.Method {
 		case http.MethodGet:
 			d, _ := json.Marshal(config)
-			writeAll(w, d)
+			w.Header().Add("Content-Type", "application/json")
+			if len(d) > 4096 {
+				w.Header().Add("Content-Encoding", "deflate")
+				w2, _ := flate.NewWriter(w, flate.DefaultCompression)
+				writeAll(w2, d)
+				w2.Flush()
+			} else {
+				writeAll(w, d)
+			}
 		case http.MethodPut:
 			data, err := io.ReadAll(r.Body)
 			if err != nil {

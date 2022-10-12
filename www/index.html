@@ -41,27 +41,25 @@
         <span class="w3-text-black w3-white ui-layer2" id="indLabel">???/???</span>
         <div class="w3-card">
             <span onclick="document.getElementById('imageModal').style.display = 'block'" id="smallImgWrapper">
-                <img id="smallImg" src="flight.jpg" />
             </span>
         </div>
     </div>
 
     <div class="w3-modal w3-animate-zoom" onclick="this.style.display='none'" id="imageModal">
-        <img id="bigImg" src="flight.jpg" />
     </div>
 
     <div class="w3-modal w3-animate-opacity" onclick="this.style.display='none'" id="infoModal">
         <div class="w3-modal-content w3-white w3-display-middle">
-            <p>Image: flight.jpg</p>
+            <!-- <p>Image: flight.jpg</p>
             <p>Storage: ??? MiB</p>
-            <p>Should I put scale dimensions here?</p>
+            <p>Should I put scale dimensions here?</p> -->
         </div>
     </div>
 
     <div class="w3-modal" id="errorModal">
         <div class="w3-modal-content w3-red w3-display-middle">
             <h3>Error</h3>
-            <p>Error description.</p>
+            <p id="errorModalInner">Error description.</p>
         </div>
     </div>
 
