@@ -2,26 +2,22 @@ function FolderMenu(props) {
     const listData = props.folders.map((x, i) => {
         return (
             <li className="w3-hover-dark-gray" onClick={() => props.onClick(i)} key={x}>
-                {x} <span onClick={() => props.rmFldr(i)}
+                {x} <span onClick={(e) => { e.stopPropagation(); props.rmFldr(i); }}
                     className="w3-button rmButton">&times;</span>
             </li>
         );
     });
     const len = props.folders.length;
-    return (<div>
+    const trashClss = props.trashGreen ? "w3-hover-green" : "w3-hover-dark-gray";
+    return ReactDOM.createPortal(<div>
         {listData}
         <li className="w3-hover-dark-gray" key="Sort" onClick={() => props.onClick(len)}>Sort</li>
-        <li className="w3-hover-dark-gray" key="Trash" onClick={() => props.onClick(len + 1)}>Trash
-            <span onClick={() => props.rmFldr(len + 1)} className="w3-button rmButton">
+        <li className={trashClss} key="Trash" onClick={() => props.onClick(len + 1)}>Trash
+            <span onClick={(e) => { e.stopPropagation(); props.rmFldr(len + 1); }} className="w3-button rmButton">
                 &times;</span></li>
         <li className="w3-hover-dark-gray" key="New" onClick={() => props.onClick(len + 2)}>New...</li>
         <li className="w3-hover-dark-gray" key="Options" onClick={() => props.onClick(len + 3)}>Options</li>
-    </div>);
-}
-
-function FolderMenuMngr(props) {
-    return ReactDOM.createPortal(<FolderMenu folders={props.folders} onClick={props.onClick} rmFldr={props.rmFldr} />,
-        document.getElementById("folderMenuMountPoint"));
+    </div>, document.getElementById("folderMenuMountPoint"));
 }
 
 function LargeImageMngr(props) {
@@ -90,13 +86,10 @@ function FolderBar(props) {
     return ReactDOM.createPortal(data, document.getElementById("folderBarMountPoint"));
 }
 
-// TODO: Am I going to do anything with the first 3?
 const flagsEnum = {
-    reserved1: 1,
-    reserved: 2,
-    reserved2: 4,
-    animUp: 8,
-    animDown: 16
+    animUp: 1,
+    animDown: 2,
+    trashGreen: 4
 }
 
 class GodObject extends React.Component {
@@ -192,7 +185,7 @@ class GodObject extends React.Component {
             });
         }.bind(this, fldr));
         loader.open("GET", "/api/1/list/" + fldr);
-        // TODO: Smarter way of finding supported images
+        // Seems it isn't possible to get a list of supported mime types...
         loader.setRequestHeader("Accept", "image/jpeg,image/png,image/bmp,image/gif,image/webp,video/mp4,video/ogg,video/mpeg,video/webm");
         loader.send();
     }
@@ -301,13 +294,13 @@ class GodObject extends React.Component {
     rmFldr(i) {
         const loader = new XMLHttpRequest();
         loader.onload = function () {
-            // if (loader.status != 200) {
-            //     return
-            // }
             // We should probably reload if there was an error
-            // FIXME?: Clicking the X button will cause a folder switch, should probably fix that
             if (i < this.state.folders.length) {
                 this.populateFldrList();
+            } else {
+                this.setState({
+                    flags: flagsEnum.trashGreen,
+                });
             }
         }.bind(this, i);
         if (i == this.state.folders.length + 1) {
@@ -331,7 +324,7 @@ class GodObject extends React.Component {
                 max={this.state.listing.length} laction={() => this.addToInd(-1)} raction={() => this.addToInd(1)}
                 sortAction={this.state.curFldr == "Sort" ? () => this.toggleBar() : () => this.moveCur("Sort")}
                 delAction={() => this.delCur()} switchAction={() => this.diffSwap()} dims={this.state.modalDims} />
-            <FolderMenuMngr folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} rmFldr={(i) => this.rmFldr(i)} flags={this.state.flags} />
+            <FolderMenu folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} rmFldr={(i) => this.rmFldr(i)} flags={this.state.flags} trashGreen={this.state.flags & flagsEnum.trashGreen} />
             <InfoModal size={this.state.modalSize} fName={this.state.listing.length ? this.state.listing[this.state.lsind] : "empty.svg"} />
         </div>
         );
