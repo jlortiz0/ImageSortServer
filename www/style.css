@@ -152,7 +152,9 @@ hr {
     z-index: 1;
     margin: 0;
     width: 100vw;
+    overflow-y: hidden;
     overflow-x: auto;
+    white-space: nowrap;
     position: absolute;
     display: none;
 }
