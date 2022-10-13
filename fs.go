@@ -186,11 +186,10 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				writeAll(w, []byte("not a directory"))
 				return
 			}
-			// TODO: Name conflict resolution
 			base := path.Base(loc)
 			ext := base[strings.LastIndexByte(base, '.'):]
-			base = base[:len(base)-len(ext)]
 			_, err = os.Stat(path.Join(target, base))
+			base = base[:len(base)-len(ext)]
 			j := -1
 			for err == nil || !errors.Is(err, os.ErrNotExist) {
 				if err != nil {
@@ -207,7 +206,7 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			} else {
 				target = fmt.Sprintf("%s%c%s_%d%s", string(targetB), os.PathSeparator, base, j, ext)
 			}
-			// TODO: update hashes
+			hashes[target] = hashes[r.URL.Path]
 			err = os.Rename(loc, path.Join(i.rootDir, target))
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -273,6 +272,24 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		b := path.Base(r.URL.Path)
+		delete(hashes, r.URL.Path)
+		ext := b[strings.LastIndexByte(b, '.'):]
+		b2 := b[:len(b)-len(ext)]
+		_, err = os.Stat(path.Join("Trash", b))
+		j := -1
+		for err == nil || !errors.Is(err, os.ErrNotExist) {
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				writeAll(w, []byte(err.Error()))
+				logError(err, OP_MOVE, loc+" Trash")
+				return
+			}
+			j++
+			_, err = os.Stat(fmt.Sprintf("Trash%c%s_%d%s", os.PathSeparator, b2, j, ext))
+		}
+		if j != -1 {
+			b = fmt.Sprintf("%s_%d%s", b2, j, ext)
+		}
 		err = os.Rename(loc, path.Join(i.rootDir, "Trash", b))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
