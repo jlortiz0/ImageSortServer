@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,22 @@ func main() {
 	rand.Seed(time.Now().Unix())
 	mime.AddExtensionType(".webm", "video/webm")
 	// TODO: flags
+	f, err := os.ReadFile("flate.types")
+	if err != nil {
+		shouldCompress = make(map[string]bool, 0)
+	} else {
+		data := strings.Split(string(f), "\n")
+		shouldCompress = make(map[string]bool, len(data))
+		for _, x := range data {
+			if len(x) == 0 {
+				continue
+			}
+			if x[len(x)-1] == '\r' {
+				x = x[:len(x)-1]
+			}
+			shouldCompress[x] = true
+		}
+	}
 	loadHashes()
 	loadSettings()
 	hndlr := http.NewServeMux()
@@ -33,7 +50,7 @@ func main() {
 	hndlr.Handle("/index", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
 	hndlr.Handle("/favicon.ico", NewSpecificFileHandler("www/favicon.ico"))
 	hndlr.Handle("/", NewImageSortRootMount(rootDir))
-	_, err := os.Stat(path.Join(rootDir, "Sort"))
+	_, err = os.Stat(path.Join(rootDir, "Sort"))
 	if err != nil {
 		os.Mkdir(path.Join(rootDir, "Sort"), 0600)
 	}

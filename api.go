@@ -92,7 +92,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			dList = append(dList, "Sort", "Trash")
 		} else {
 			accept := r.Header.Get("Accept")
 			allowed := make(map[string]bool, 16)
@@ -122,7 +121,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		w.Header().Add("Content-Type", "application/json")
-		if len(dList) == 0 && len(fList) != 0 {
+		if len(dList) == 0 && len(fList) != 0 && url[1] != "." {
 			w.WriteHeader(http.StatusNotAcceptable)
 		}
 		d, _ := json.Marshal(dList)

@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var shouldCompress map[string]bool
+
 type FileReadOnlyHandler struct {
 	rootDir string
 	strip   int
@@ -75,16 +77,13 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		mtype := mime.TypeByExtension(string(h)[ind:])
 		if mtype != "" {
 			w.Header().Add("Content-Type", mtype)
-			if strings.HasPrefix(mtype, "text/") {
-				if strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
-					compress = true
-					w.Header().Add("Content-Encoding", "deflate")
-				}
+			if stat.Size() > 512 && shouldCompress[mtype] && strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
+				compress = true
+				w.Header().Add("Content-Encoding", "deflate")
 			}
 		}
 	}
 	w.Header().Add("Cache-Control", "public, max-age=604800")
-	w.Header().Add("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	w.Header().Add("Last-Modified", stat.ModTime().UTC().Format(time.RFC1123))
 	modSince := r.Header.Get("If-Modified-Since")
 	if modSince != "" {
@@ -106,6 +105,7 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				err = w2.Flush()
 			}
 		} else {
+			w.Header().Add("Content-Length", strconv.FormatInt(stat.Size(), 10))
 			_, err = io.Copy(w, f)
 		}
 		if err != nil {
