@@ -39,11 +39,12 @@ function SmallImageMngr(props) {
 }
 
 function LRButtonsMngr(props) {
+    const ds = props.isDiff ? (props.diffWhich ? "F2 " : "F1 ") : "";
     return ReactDOM.createPortal(<div>
         <button className="w3-btn w3-display-left w3-white ui-layer2" onClick={props.laction} disabled={!props.sel}>&lt;</button>
         <button className="w3-btn w3-display-right w3-white ui-layer2" onClick={props.raction} disabled={props.sel + 1 >= props.max}>&gt;</button>
         <span className="w3-text-black w3-white ui-layer2" id="dimLabel">{props.dims}</span>
-        <span className="w3-text-black w3-white ui-layer2" id="indLabel">{props.sel + 1}/{props.max}</span>
+        <span className="w3-text-black w3-white ui-layer2" id="indLabel">{ds}{props.sel + 1}/{props.max}</span>
     </div>, document.getElementById("lrButtonsMountPoint"));
 }
 
@@ -55,9 +56,9 @@ function ButtonsMngr(props) {
             onClick={props.sortAction}>{props.curFldr == "Sort" ? "B" : "S"}</button>
         <button className="w3-button w3-gray w3-right title-bar"
             onClick={() => document.getElementById('infoModal').style.display = 'block'}>I</button>
-        <button className="w3-button w3-gray w3-right title-bar" disabled={!props.isDiff}
+        <button className="w3-button w3-gray w3-right title-bar"
             onClick={props.switchAction}>O</button>
-        <LRButtonsMngr sel={props.sel} laction={props.laction} raction={props.raction} max={props.max} dims={props.dims} />
+        <LRButtonsMngr sel={props.sel} laction={props.laction} raction={props.raction} max={props.max} dims={props.dims} isDiff={props.isDiff} diffWhich={props.diffWhich} />
     </div>, document.getElementById("buttonsMountPoint"));
 }
 
@@ -111,6 +112,7 @@ class GodObject extends React.Component {
             isDiff: false,
             lastMoveLeft: false,
             folderBarVisible: false,
+            diffWhich: false,
         }
         this.populateFldrList();
     }
@@ -236,6 +238,7 @@ class GodObject extends React.Component {
                 lsind: newInd,
                 modalSize: parseInt(loader.responseText, 10),
                 lastMoveLeft: lastMoveLeft,
+                diffWhich: false,
             });
             setTimeout(function () {
                 const elem = document.getElementById("bigImg");
@@ -247,7 +250,7 @@ class GodObject extends React.Component {
                 });
             }.bind(this), 20);
         }.bind(this, i));
-        loader.open("GET", "/api/1/info/" + this.state.curFldr + "/" + this.state.listing[newInd]);
+        loader.open("GET", "/api/1/info/" + this.state.curFldr + "/" + (this.state.isDiff ? this.state.listing[newInd][0] : this.state.listing[newInd]));
         loader.send();
     }
 
@@ -262,7 +265,7 @@ class GodObject extends React.Component {
     delCur() {
         const ind = this.state.lsind;
         const loader = new XMLHttpRequest();
-        loader.open("DELETE", "/" + this.state.curFldr + "/" + this.state.listing[ind]);
+        loader.open("DELETE", "/" + this.state.curFldr + "/" + (this.state.isDiff ? this.state.listing[ind][0] : this.state.listing[ind]));
         loader.send();
         const newLs = this.state.listing.slice();
         newLs.copyWithin(ind, ind + 1);
@@ -276,7 +279,7 @@ class GodObject extends React.Component {
     moveCur(loc) {
         const ind = this.state.lsind;
         const loader = new XMLHttpRequest();
-        loader.open("POST", "/" + this.state.curFldr + "/" + this.state.listing[ind]);
+        loader.open("POST", "/" + this.state.curFldr + "/" + (this.state.isDiff ? this.state.listing[ind][0] : this.state.listing[ind]));
         loader.send(loc);
         const newLs = this.state.listing.slice();
         newLs.copyWithin(ind, ind + 1);
@@ -287,11 +290,44 @@ class GodObject extends React.Component {
         });
     }
 
+    beginDiffMode() {
+        const loader = new XMLHttpRequest();
+        const doit = function (_, loader) {
+            if (loader.status == 202) {
+                const loader2 = new XMLHttpRequest();
+                loader2.onload = () => doit(loader2);
+                loader2.open("GET", "/api/1/dedup?token=" + loader.responseText);
+                setTimeout(() => loader2.send(), 2500);
+                return
+            } else if (loader.status != 200) {
+                return;
+            }
+            const ls = JSON.parse(loader.responseText);
+            this.setState({
+                isDiff: true,
+                diffWhich: false,
+                listing: ls,
+                curFldr: ".",
+                lsind: 0,
+            }, () => {
+                document.getElementById("title-text").innerText = "DeDuplicator";
+                this.addToInd(0);
+            });
+        }.bind(this, doit);
+        loader.onload = (() => doit(loader)).bind(loader);
+        loader.open("GET", "/api/1/dedup");
+        loader.send();
+    }
+
     // TODO: diff mode
     diffSwap() {
         if (!this.state.isDiff) {
+            this.beginDiffMode()
             return
         }
+        this.setState({
+            diffWhich: !this.state.diffWhich,
+        });
     }
 
     toggleBar() {
@@ -355,17 +391,18 @@ class GodObject extends React.Component {
     }
 
     render() {
-        const sel = this.state.listing.length ? "/" + this.state.curFldr + "/" + this.state.listing[this.state.lsind] : "empty.svg";
+        const sel2 = this.state.listing.length ? (this.state.isDiff ? this.state.listing[this.state.lsind][this.state.diffWhich ? 1 : 0] : this.state.listing[this.state.lsind]) : undefined;
+        const sel = this.state.listing.length ? "/" + this.state.curFldr + "/" + sel2 : "empty.svg";
         return (<div>
             <FolderBar folders={this.state.folders} onClick={(i) => this.moveCur(this.state.folders[i])} />
             <LargeImageMngr sel={sel} isVideo={isVideo(sel)} />
             <SmallImageMngr sel={sel} isVideo={isVideo(sel)} animEnd={(e) => this.handleAnimEnd(e)} flags={this.state.flags} />
-            <ButtonsMngr curFldr={this.state.curFldr} isDiff={this.state.isDiff} sel={this.state.lsind}
+            <ButtonsMngr curFldr={this.state.curFldr} isDiff={this.state.isDiff} sel={this.state.lsind} diffWhich={this.state.diffWhich}
                 max={this.state.listing.length} laction={() => this.addToInd(-1)} raction={() => this.addToInd(1)}
                 sortAction={this.state.curFldr == "Sort" ? () => this.toggleBar() : () => this.moveCur("Sort")}
                 delAction={() => this.delCur()} switchAction={() => this.diffSwap()} dims={this.state.modalDims} />
             <FolderMenu folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} rmFldr={(i) => this.rmFldr(i)} flags={this.state.flags} trashGreen={this.state.flags & flagsEnum.trashGreen} />
-            <InfoModal size={this.state.modalSize} fName={this.state.listing.length ? this.state.listing[this.state.lsind] : "empty.svg"} />
+            <InfoModal size={this.state.modalSize} fName={this.state.listing.length ? sel2 : "empty.svg"} />
             <NewFldrModal onClick={() => this.handleNewFldr()} />
             <SettingsModal onClick={() => this.handleSettingsSave()} />
         </div>
