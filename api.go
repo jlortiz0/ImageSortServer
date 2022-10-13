@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -124,6 +125,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if len(dList) == 0 && len(fList) != 0 && url[1] != "." {
 			w.WriteHeader(http.StatusNotAcceptable)
 		}
+		sort.Strings(dList)
 		d, _ := json.Marshal(dList)
 		if len(d) > 4096 {
 			w.Header().Add("Content-Encoding", "deflate")
