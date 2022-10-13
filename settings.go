@@ -17,6 +17,9 @@ var config Settings
 func loadSettings() error {
 	data, err := os.ReadFile(path.Join(rootDir, "ImgSort.cfg"))
 	if err != nil {
+		config.HashDiff = 64
+		config.HashSize = 16
+		config.FadeSpeed = 64
 		return err
 	}
 	return json.Unmarshal(data, &config)
