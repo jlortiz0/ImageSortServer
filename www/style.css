@@ -144,7 +144,7 @@ hr {
 
 .rmButton {
     margin: 0;
-    float: right;
+    display: inline;
     padding: 4px 8px;
 }
 
@@ -199,4 +199,8 @@ input {
 
 #settingsModalMountPoint {
     display: inline;
+}
+
+#indLabel>input {
+    width: 4em;
 }

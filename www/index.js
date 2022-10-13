@@ -44,7 +44,7 @@ function LRButtonsMngr(props) {
         <button className="w3-btn w3-display-left w3-white ui-layer2" onClick={props.laction} disabled={!props.sel}>&lt;</button>
         <button className="w3-btn w3-display-right w3-white ui-layer2" onClick={props.raction} disabled={props.sel + 1 >= props.max}>&gt;</button>
         <span className="w3-text-black w3-white ui-layer2" id="dimLabel">{props.dims}</span>
-        <span className="w3-text-black w3-white ui-layer2" id="indLabel">{ds}{props.sel + 1}/{props.max}</span>
+        <span className="w3-text-black w3-white ui-layer2" id="indLabel">{ds}<input onBlur={props.gaction} defaultValue={props.sel + 1} type="number" min="1" max={props.max} />/{props.max}</span>
     </div>, document.getElementById("lrButtonsMountPoint"));
 }
 
@@ -58,7 +58,8 @@ function ButtonsMngr(props) {
             onClick={() => document.getElementById('infoModal').style.display = 'block'}>I</button>
         <button className="w3-button w3-gray w3-right title-bar"
             onClick={props.switchAction}>O</button>
-        <LRButtonsMngr sel={props.sel} laction={props.laction} raction={props.raction} max={props.max} dims={props.dims} isDiff={props.isDiff} diffWhich={props.diffWhich} />
+        <LRButtonsMngr sel={props.sel} laction={props.laction} raction={props.raction} max={props.max} dims={props.dims}
+            isDiff={props.isDiff} diffWhich={props.diffWhich} gaction={props.gaction} />
     </div>, document.getElementById("buttonsMountPoint"));
 }
 
@@ -241,6 +242,7 @@ class GodObject extends React.Component {
                 diffWhich: false,
             });
             setTimeout(function () {
+                document.getElementById("indLabel").children[0].value = this.state.lsind + 1;
                 const elem = document.getElementById("bigImg");
                 if (elem == null) {
                     return;
@@ -319,7 +321,6 @@ class GodObject extends React.Component {
         loader.send();
     }
 
-    // TODO: diff mode
     diffSwap() {
         if (!this.state.isDiff) {
             this.beginDiffMode()
@@ -390,6 +391,16 @@ class GodObject extends React.Component {
         loader.send(JSON.stringify(body));
     }
 
+    handleGoto() {
+        const v = document.getElementById("indLabel").children[0];
+        const i = parseInt(v.value);
+        if (i != NaN) {
+            this.addToInd(i - this.state.lsind - 1);
+        } else {
+            v.value = this.state.lsind + 1;
+        }
+    }
+
     render() {
         const sel2 = this.state.listing.length ? (this.state.isDiff ? this.state.listing[this.state.lsind][this.state.diffWhich ? 1 : 0] : this.state.listing[this.state.lsind]) : undefined;
         const sel = this.state.listing.length ? "/" + this.state.curFldr + "/" + sel2 : "empty.svg";
@@ -400,7 +411,7 @@ class GodObject extends React.Component {
             <ButtonsMngr curFldr={this.state.curFldr} isDiff={this.state.isDiff} sel={this.state.lsind} diffWhich={this.state.diffWhich}
                 max={this.state.listing.length} laction={() => this.addToInd(-1)} raction={() => this.addToInd(1)}
                 sortAction={this.state.curFldr == "Sort" ? () => this.toggleBar() : () => this.moveCur("Sort")}
-                delAction={() => this.delCur()} switchAction={() => this.diffSwap()} dims={this.state.modalDims} />
+                delAction={() => this.delCur()} switchAction={() => this.diffSwap()} dims={this.state.modalDims} gaction={() => this.handleGoto()} />
             <FolderMenu folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} rmFldr={(i) => this.rmFldr(i)} flags={this.state.flags} trashGreen={this.state.flags & flagsEnum.trashGreen} />
             <InfoModal size={this.state.modalSize} fName={this.state.listing.length ? sel2 : "empty.svg"} />
             <NewFldrModal onClick={() => this.handleNewFldr()} />
