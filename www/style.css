@@ -141,3 +141,22 @@ hr {
     height: auto;
     width: auto;
 }
+
+.rmButton {
+    margin: 0;
+    float: right;
+    padding: 4px 8px;
+}
+
+#folderBarMountPoint {
+    z-index: 1;
+    margin: 0;
+    width: 100vw;
+    overflow-x: auto;
+    position: absolute;
+    display: none;
+}
+
+#folderBarMountPoint>button {
+    margin: 0 0.25em;
+}

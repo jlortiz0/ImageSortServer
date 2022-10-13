@@ -1,13 +1,26 @@
 function FolderMenu(props) {
-    return props.folders.map((x, i) => {
+    const listData = props.folders.map((x, i) => {
         return (
-            <li className="w3-hover-dark-gray" onClick={() => props.onClick(i)} key={x}>{x}</li>
+            <li className="w3-hover-dark-gray" onClick={() => props.onClick(i)} key={x}>
+                {x} <span onClick={() => props.rmFldr(i)}
+                    className="w3-button rmButton">&times;</span>
+            </li>
         );
-    })
+    });
+    const len = props.folders.length;
+    return (<div>
+        {listData}
+        <li className="w3-hover-dark-gray" key="Sort" onClick={() => props.onClick(len)}>Sort</li>
+        <li className="w3-hover-dark-gray" key="Trash" onClick={() => props.onClick(len + 1)}>Trash
+            <span onClick={() => props.rmFldr(len + 1)} className="w3-button rmButton">
+                &times;</span></li>
+        <li className="w3-hover-dark-gray" key="New" onClick={() => props.onClick(len + 2)}>New...</li>
+        <li className="w3-hover-dark-gray" key="Options" onClick={() => props.onClick(len + 3)}>Options</li>
+    </div>);
 }
 
 function FolderMenuMngr(props) {
-    return ReactDOM.createPortal(<FolderMenu folders={props.folders} onClick={props.onClick} />,
+    return ReactDOM.createPortal(<FolderMenu folders={props.folders} onClick={props.onClick} rmFldr={props.rmFldr} />,
         document.getElementById("folderMenuMountPoint"));
 }
 
@@ -21,10 +34,11 @@ function LargeImageMngr(props) {
 
 function SmallImageMngr(props) {
     if (props.isVideo) {
-        return ReactDOM.createPortal(<video id="smallImg" src={props.sel} autoPlay controls loop muted playsInline disablePictureInPicture />,
+        return ReactDOM.createPortal(<video id="smallImg" src={props.sel} autoPlay controls loop muted playsInline disablePictureInPicture onAnimationEnd={props.animEnd} />,
             document.getElementById("smallImgWrapper"));
     }
-    return ReactDOM.createPortal(<img id="smallImg" src={props.sel} />,
+    const clss = props.flags & flagsEnum.animUp ? "animUp" : (props.flags & flagsEnum.animDown ? "animDown" : "")
+    return ReactDOM.createPortal(<img id="smallImg" className={clss} src={props.sel} onAnimationEnd={props.animEnd} />,
         document.getElementById("smallImgWrapper"));
 }
 
@@ -37,9 +51,11 @@ function LRButtonsMngr(props) {
     </div>, document.getElementById("lrButtonsMountPoint"));
 }
 
+// TODO: Consider disabling B on empty folder bar
 function ButtonsMngr(props) {
-    return ReactDOM.createPortal(<div><button className="w3-button w3-gray w3-right title-bar"
-        onClick={props.delAction}>D</button>
+    return ReactDOM.createPortal(<div>
+        <button className="w3-button w3-gray w3-right title-bar"
+            onClick={props.delAction} disabled={props.curFldr == "Trash"}>D</button>
         <button className="w3-button w3-gray w3-right title-bar"
             onClick={props.sortAction}>{props.curFldr == "Sort" ? "B" : "S"}</button>
         <button className="w3-button w3-gray w3-right title-bar"
@@ -62,14 +78,25 @@ function InfoModal(props) {
     return ReactDOM.createPortal(<div className="w3-modal-content w3-white w3-display-middle">
         <p>Image: {props.fName}</p>
         <p>Storage: {sizeDisplay}</p>
-        {/* <p>Dimensions: {props.dims}</p> */}
     </div>, document.getElementById("infoModal"));
 }
 
+function FolderBar(props) {
+    const data = props.folders.map((x, i) => {
+        return (
+            <button className="w3-btn w3-ripple w3-aqua" onClick={() => props.onClick(i)} key={x}>{x}</button>
+        );
+    });
+    return ReactDOM.createPortal(data, document.getElementById("folderBarMountPoint"));
+}
+
+// TODO: Am I going to do anything with the first 3?
 const flagsEnum = {
-    loadingFldrList: 1,
-    loadingImg: 2,
-    loadingFldr: 4,
+    reserved1: 1,
+    reserved: 2,
+    reserved2: 4,
+    animUp: 8,
+    animDown: 16
 }
 
 class GodObject extends React.Component {
@@ -79,10 +106,11 @@ class GodObject extends React.Component {
             folders: [],
             curFldr: "",
             listing: [],
-            flags: flagsEnum.loadingFldrList,
+            flags: 0,
             lsind: 0,
             isDiff: false,
             lastMoveLeft: false,
+            folderBarVisible: false,
         }
         this.populateFldrList();
     }
@@ -93,18 +121,15 @@ class GodObject extends React.Component {
             if (loader.status != 200) {
                 if (loader.responseText.length != 0) {
                     document.getElementById("errorModalInner").innerHTML = (
-                        <p>Error loading folder list:<br />{loader.responseText}</p>
+                        <p>Error loading folder list:<br />{loader.responseText.toString()}</p>
                     );
+                    document.getElementById("errorModal").style.display = "block";
                 }
-                this.setState({
-                    flags: 0,
-                })
                 return
             }
             const ret = JSON.parse(loader.responseText);
             this.setState({
                 folders: ret,
-                flags: 0,
             })
         }.bind(this));
         loader.open("GET", "/api/1/list");
@@ -112,14 +137,28 @@ class GodObject extends React.Component {
     }
 
     handleFldrMenuClick(i) {
+        document.getElementById('sidebar').style.display = 'none';
+        if (i >= this.state.folders.length) {
+            switch (i - this.state.folders.length) {
+                case 0:
+                    this.populateFileList("Sort");
+                    document.getElementById('title-text').innerText = "Sort";
+                    break;
+                case 1:
+                    this.populateFileList("Trash");
+                    document.getElementById('title-text').innerText = "Trash";
+                    break;
+                case 2:
+                // TODO: New...
+                case 3:
+                // TODO: Options
+            }
+            return;
+        }
         if (this.state.folders[i] != this.state.curFldr) {
-            this.setState({
-                flags: flagsEnum.loadingFldr,
-            });
             this.populateFileList(this.state.folders[i]);
             document.getElementById('title-text').innerText = this.state.folders[i];
         }
-        document.getElementById('sidebar').style.display = 'none';
     }
 
     populateFileList(fldr) {
@@ -128,7 +167,7 @@ class GodObject extends React.Component {
             if (loader.status != 200) {
                 if (loader.responseText.length != 0) {
                     document.getElementById("errorModalInner").innerHTML =
-                        "Error loading folder:<br />" + loader.responseText;
+                        "Error loading folder:<br />" + loader.responseText.toString();
                     document.getElementById("errorModal").style.display = true;
                 }
                 this.setState({
@@ -136,6 +175,7 @@ class GodObject extends React.Component {
                     curFldr: fldr,
                     listing: [],
                     isDiff: false,
+                    folderBarVisible: false,
                 })
                 return
             }
@@ -144,10 +184,12 @@ class GodObject extends React.Component {
                 listing: ret,
                 curFldr: fldr,
                 isDiff: false,
+                flags: 0,
                 lsind: 0,
+            }, () => {
+                this.addToInd(0);
+                this.toggleBar();
             });
-            // I hate timings
-            setTimeout(() => this.addToInd(0), 20);
         }.bind(this, fldr));
         loader.open("GET", "/api/1/list/" + fldr);
         // TODO: Smarter way of finding supported images
@@ -162,10 +204,10 @@ class GodObject extends React.Component {
             newInd = 0;
         } else if (newInd >= this.state.listing.length) {
             newInd = this.state.listing.length - 1;
+            if (newInd == -1) {
+                return;
+            }
         }
-        this.setState({
-            flags: flagsEnum.loadingImg,
-        });
         const loader = new XMLHttpRequest();
         loader.onload = (function () {
             if (loader.status != 200) {
@@ -187,6 +229,9 @@ class GodObject extends React.Component {
             });
             setTimeout(function () {
                 const elem = document.getElementById("bigImg");
+                if (elem == null) {
+                    return;
+                }
                 this.setState({
                     modalDims: elem.width + "x" + elem.height,
                 });
@@ -196,7 +241,14 @@ class GodObject extends React.Component {
         loader.send();
     }
 
-    // TODO: These two functions bounce the slice but not the request. Figure out why.
+    handleAnimEnd(e) {
+        this.setState({
+            listing: this.state.newLs,
+            newLs: undefined,
+            flags: this.state.flags & ~(flagsEnum.animUp | flagsEnum.animDown),
+        }, () => this.addToInd(this.state.lastMoveLeft ? -1 : 0));
+    }
+
     delCur() {
         const ind = this.state.lsind;
         const loader = new XMLHttpRequest();
@@ -206,9 +258,9 @@ class GodObject extends React.Component {
         newLs.copyWithin(ind, ind + 1);
         newLs.length--;
         this.setState({
-            listing: newLs,
+            newLs: newLs,
+            flags: flagsEnum.animDown,
         });
-        setTimeout(() => this.addToInd(this.state.lastMoveLeft ? -1 : 0), 20);
     }
 
     moveCur(loc) {
@@ -220,9 +272,9 @@ class GodObject extends React.Component {
         newLs.copyWithin(ind, ind + 1);
         newLs.length--;
         this.setState({
-            listing: newLs,
+            newLs: newLs,
+            flags: flagsEnum.animUp,
         });
-        setTimeout(() => this.addToInd(this.state.lastMoveLeft ? -1 : 0), 20);
     }
 
     // TODO: diff mode
@@ -232,23 +284,54 @@ class GodObject extends React.Component {
         }
     }
 
-    // TODO: folder bar
     toggleBar() {
+        if (this.state.curFldr == "Sort" && !this.state.folderBarVisible) {
+            this.setState({
+                folderBarVisible: true,
+            });
+            document.getElementById("folderBarMountPoint").style.display = "block";
+        } else {
+            this.setState({
+                folderBarVisible: false,
+            });
+            document.getElementById("folderBarMountPoint").style.display = "none";
+        }
+    }
 
+    rmFldr(i) {
+        const loader = new XMLHttpRequest();
+        loader.onload = function () {
+            // if (loader.status != 200) {
+            //     return
+            // }
+            // We should probably reload if there was an error
+            // FIXME?: Clicking the X button will cause a folder switch, should probably fix that
+            if (i < this.state.folders.length) {
+                this.populateFldrList();
+            }
+        }.bind(this, i);
+        if (i == this.state.folders.length + 1) {
+            loader.open("DELETE", "/Trash");
+        } else if (i >= this.state.folders.length) {
+            return;
+        } else {
+            loader.open("DELETE", "/" + this.state.folders[i]);
+        }
+        loader.send();
     }
 
     // TODO: Keyboard controls
-    // TODO: folder delete, trash clear
     render() {
         const sel = this.state.listing.length ? "/" + this.state.curFldr + "/" + this.state.listing[this.state.lsind] : "empty.svg";
         return (<div>
+            <FolderBar folders={this.state.folders} onClick={(i) => this.moveCur(this.state.folders[i])} />
             <LargeImageMngr sel={sel} isVideo={isVideo(sel)} />
-            <SmallImageMngr sel={sel} isVideo={isVideo(sel)} />
+            <SmallImageMngr sel={sel} isVideo={isVideo(sel)} animEnd={(e) => this.handleAnimEnd(e)} flags={this.state.flags} />
             <ButtonsMngr curFldr={this.state.curFldr} isDiff={this.state.isDiff} sel={this.state.lsind}
                 max={this.state.listing.length} laction={() => this.addToInd(-1)} raction={() => this.addToInd(1)}
                 sortAction={this.state.curFldr == "Sort" ? () => this.toggleBar() : () => this.moveCur("Sort")}
                 delAction={() => this.delCur()} switchAction={() => this.diffSwap()} dims={this.state.modalDims} />
-            <FolderMenuMngr folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} />
+            <FolderMenuMngr folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} rmFldr={(i) => this.rmFldr(i)} flags={this.state.flags} />
             <InfoModal size={this.state.modalSize} fName={this.state.listing.length ? this.state.listing[this.state.lsind] : "empty.svg"} />
         </div>
         );
