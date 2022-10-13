@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"io"
 	"log"
 	"math/rand"
@@ -16,13 +17,16 @@ import (
 
 const defaultRootDir = "root"
 
-var rootDir string = defaultRootDir
+var rootDir string
 
 func main() {
 	rand.Seed(time.Now().Unix())
 	mime.AddExtensionType(".webm", "video/webm")
-	// TODO: flags
-	f, err := os.ReadFile("flate.types")
+	flateTypes := flag.String("flate", "flate.types", "file containing list of types to deflate")
+	flag.StringVar(&rootDir, "r", defaultRootDir, "root directory that contains your folders")
+	www := flag.String("w", "www", "directory to serve html from")
+	flag.Parse()
+	f, err := os.ReadFile(*flateTypes)
 	if err != nil {
 		shouldCompress = make(map[string]bool, 0)
 	} else {
@@ -41,14 +45,15 @@ func main() {
 	loadHashes()
 	loadSettings()
 	hndlr := http.NewServeMux()
-	hndlr.Handle("/login-test", NewAuthRequired(http.NotFoundHandler()))
+	// hndlr.Handle("/login-test", NewAuthRequired(http.NotFoundHandler()))
 	hndlr.HandleFunc("/api/1/", apiHandler)
 	hndlr.Handle("/api/", http.NotFoundHandler())
-	hndlr.Handle("/www/", NewFileReadOnlyHandler("www", 1))
-	hndlr.Handle("/index.html", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
-	hndlr.Handle("/index.htm", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
-	hndlr.Handle("/index", http.RedirectHandler("/www/index.html", http.StatusMovedPermanently))
-	hndlr.Handle("/favicon.ico", NewSpecificFileHandler("www/favicon.ico"))
+	hndlr.Handle("/www/", NewFileReadOnlyHandler(*www, 1))
+	indx := path.Join(*www, "index.html")
+	hndlr.Handle("/index.html", http.RedirectHandler(indx, http.StatusMovedPermanently))
+	hndlr.Handle("/index.htm", http.RedirectHandler(indx, http.StatusMovedPermanently))
+	hndlr.Handle("/index", http.RedirectHandler(indx, http.StatusMovedPermanently))
+	hndlr.Handle("/favicon.ico", NewSpecificFileHandler(path.Join(*www, "favicon.ico")))
 	hndlr.Handle("/", NewImageSortRootMount(rootDir))
 	_, err = os.Stat(path.Join(rootDir, "Sort"))
 	if err != nil {
@@ -65,6 +70,7 @@ func main() {
 	<-ch
 	srv.Shutdown(context.Background())
 	saveHashes()
+	saveSettings()
 }
 
 func writeAll(w io.Writer, b []byte) error {

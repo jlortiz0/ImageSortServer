@@ -134,7 +134,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			writeAll(w, d)
 		}
 	case "info":
-		// TODO: Something, anything?
 		if r.Method != http.MethodGet {
 			w.Header().Add("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -277,13 +276,13 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				logError(err, OP_READ, "http")
 				return
 			}
-			// TODO: Sanity check, return 422 if failed
-			// Maybe some way to get the constraints?
+			var tmp Settings
 			err = json.Unmarshal(data, &config)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				writeAll(w, []byte(err.Error()))
 			} else {
+				updateSettings(tmp)
 				w.WriteHeader(http.StatusNoContent)
 			}
 		default:
