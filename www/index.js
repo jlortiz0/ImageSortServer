@@ -47,7 +47,6 @@ function LRButtonsMngr(props) {
     </div>, document.getElementById("lrButtonsMountPoint"));
 }
 
-// TODO: Consider disabling B on empty folder bar
 function ButtonsMngr(props) {
     return ReactDOM.createPortal(<div>
         <button className="w3-button w3-gray w3-right title-bar"
@@ -84,6 +83,14 @@ function FolderBar(props) {
         );
     });
     return ReactDOM.createPortal(data, document.getElementById("folderBarMountPoint"));
+}
+
+function NewFldrModal(props) {
+    return ReactDOM.createPortal(<button className="w3-btn w3-blue" onClick={props.onClick}>Create</button>, document.getElementById("fldrModalMountPoint"));
+}
+
+function SettingsModal(props) {
+    return ReactDOM.createPortal(<button className="w3-btn w3-blue" onClick={props.onClick}>Save</button>, document.getElementById("settingsModalMountPoint"));
 }
 
 const flagsEnum = {
@@ -142,9 +149,19 @@ class GodObject extends React.Component {
                     document.getElementById('title-text').innerText = "Trash";
                     break;
                 case 2:
-                // TODO: New...
+                    document.getElementById("newFldrModal").style.display = "block";
+                    document.getElementById("newFldrInput").focus();
+                    break;
                 case 3:
-                // TODO: Options
+                    const loader = new XMLHttpRequest();
+                    loader.onload = function () {
+                        const ret = JSON.parse(loader.responseText);
+                        document.getElementById("settingHashSize").value = ret.HashSize.toString();
+                        document.getElementById("settingHashDiff").value = ret.HashDiff.toString();
+                        document.getElementById("settingsModal").style.display = "block";
+                    }
+                    loader.open("GET", "/api/1/settings");
+                    loader.send();
             }
             return;
         }
@@ -313,7 +330,30 @@ class GodObject extends React.Component {
         loader.send();
     }
 
-    // TODO: Keyboard controls
+    handleNewFldr() {
+        const v = document.getElementById("newFldrInput").value;
+        document.getElementById("newFldrInput").value = "";
+        if (v.trim() == "") {
+            return;
+        }
+        document.getElementById("newFldrModal").style.display = "none";
+        const loader = new XMLHttpRequest();
+        loader.open("CREATE", "/" + v);
+        loader.onload = () => this.populateFldrList();
+        loader.send();
+    }
+
+    handleSettingsSave() {
+        const loader = new XMLHttpRequest();
+        const body = {
+            HashSize: parseInt(document.getElementById("settingHashSize").value),
+            HashDiff: parseInt(document.getElementById("settingHashDiff").value),
+        };
+        loader.onload = () => document.getElementById("settingsModal").style.display = "block";
+        loader.open("PUT", "/api/1/settings");
+        loader.send(JSON.stringify(body));
+    }
+
     render() {
         const sel = this.state.listing.length ? "/" + this.state.curFldr + "/" + this.state.listing[this.state.lsind] : "empty.svg";
         return (<div>
@@ -326,6 +366,8 @@ class GodObject extends React.Component {
                 delAction={() => this.delCur()} switchAction={() => this.diffSwap()} dims={this.state.modalDims} />
             <FolderMenu folders={this.state.folders} onClick={(i) => this.handleFldrMenuClick(i)} rmFldr={(i) => this.rmFldr(i)} flags={this.state.flags} trashGreen={this.state.flags & flagsEnum.trashGreen} />
             <InfoModal size={this.state.modalSize} fName={this.state.listing.length ? this.state.listing[this.state.lsind] : "empty.svg"} />
+            <NewFldrModal onClick={() => this.handleNewFldr()} />
+            <SettingsModal onClick={() => this.handleSettingsSave()} />
         </div>
         );
     }

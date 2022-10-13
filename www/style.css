@@ -160,3 +160,43 @@ hr {
 #folderBarMountPoint>button {
     margin: 0 0.25em;
 }
+
+#newFldrModal {
+    height: 100vh;
+}
+
+#newFldrModal>div {
+    width: 25%;
+    padding: 0.5em;
+}
+
+#newFldrModal>div>h3 {
+    text-align: center;
+}
+
+input {
+    display: inline;
+    margin: 8px;
+    width: 95%;
+}
+
+#fldrModalMountPoint {
+    display: inline;
+}
+
+#settingsModal {
+    height: 100vh;
+}
+
+#settingsModal>div {
+    width: 25%;
+    padding: 0.5em;
+}
+
+#settingsModal>div>h3 {
+    text-align: center;
+}
+
+#settingsModalMountPoint {
+    display: inline;
+}

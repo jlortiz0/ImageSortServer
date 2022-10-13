@@ -46,6 +46,39 @@
     <div class="w3-modal w3-animate-opacity" onclick="this.style.display='none'" id="infoModal">
     </div>
 
+    <div class="w3-modal w3-animate-top" id="newFldrModal">
+        <div class="w3-modal-content w3-white w3-card">
+            <h3>New Folder</h3>
+            <label for="newFldrInput">Name: </label>
+            <input type="text" id="newFldrInput" class="w3-input" />
+            <br />
+            <button class="w3-btn w3-hover-red w3-black" onclick="clearFldrModal()">Cancel</button>
+            <div id="fldrModalMountPoint"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        function clearFldrModal() {
+            document.getElementById("newFldrInput").value = "";
+            document.getElementById("newFldrModal").style.display = "none";
+        }
+    </script>
+
+    <div class="w3-modal w3-animate-top" id="settingsModal">
+        <div class="w3-modal-content w3-white w3-card">
+            <h3>Settings</h3>
+            <label for="settingHashSize">Hash Size: </label>
+            <input type="number" min="4" max="32" id="settingHashSize" class="w3-input" />
+            <br />
+            <label for="settingHashDiff">Hash Diff: </label>
+            <input type="number" min="0" max="512" id="settingHashDiff" class="w3-input" />
+            <br />
+            <button class="w3-btn w3-hover-red w3-black"
+                onclick="document.getElementById('settingsModal').style.display = 'none'">Cancel</button>
+            <div id="settingsModalMountPoint"></div>
+        </div>
+    </div>
+
     <div class="w3-modal" id="errorModal">
         <div class="w3-modal-content w3-red w3-display-middle">
             <h3>Error</h3>
