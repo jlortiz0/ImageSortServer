@@ -7,8 +7,9 @@ import (
 )
 
 type Settings struct {
-	HashDiff uint16
-	HashSize byte
+	HashDiff  uint16
+	HashSize  byte
+	FadeSpeed byte
 }
 
 var config Settings
@@ -39,5 +40,6 @@ func updateSettings(n Settings) {
 	if n.HashDiff > (uint16(n.HashSize)*uint16(n.HashSize))/2 {
 		n.HashDiff = (uint16(n.HashSize) * uint16(n.HashSize)) / 2
 	}
-	config = n
+	config.HashDiff = n.HashDiff
+	config.HashSize = n.HashSize
 }
