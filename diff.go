@@ -85,9 +85,9 @@ func initDiff(rootDir string, ls []string, fldr string) [][2]string {
 	diffLs := make([][]byte, len(ls))
 	for k, v := range ls {
 		if fldr == "" {
-			diffLs[k] = getHash(path.Join(rootDir, v))
+			diffLs[k] = getHash(v)
 		} else {
-			diffLs[k] = getHash(path.Join(rootDir, fldr, v))
+			diffLs[k] = getHash(path.Join(fldr, v))
 		}
 	}
 	diffList := make([][2]string, len(diffLs)/32)
@@ -190,17 +190,20 @@ func saveHashes() error {
 	return nil
 }
 
-func getHash(path string) []byte {
-	hash, ok := hashes[path]
+func getHash(p string) []byte {
+	if os.PathSeparator != '/' {
+		p = strings.ReplaceAll(p, "/", string(os.PathSeparator))
+	}
+	hash, ok := hashes[p]
 	if ok {
-		info, err := os.Stat(path)
+		info, err := os.Stat(path.Join(rootDir, p))
 		if err == nil && info.ModTime().Unix() == hash.modTime {
 			return hash.hash
 		}
 	}
 	var err error
 	var img image.Image
-	switch strings.ToLower(path[strings.LastIndexByte(path, '.')+1:]) {
+	switch strings.ToLower(p[strings.LastIndexByte(p, '.')+1:]) {
 	case "mp4":
 		fallthrough
 	case "webm":
@@ -208,24 +211,24 @@ func getHash(path string) []byte {
 	case "gif":
 		fallthrough
 	case "mov":
-		img, err = getVideoFrame(path)
+		img, err = getVideoFrame(path.Join(rootDir, p))
 	default:
-		img, err = imagehash.OpenImg(path)
+		img, err = imagehash.OpenImg(path.Join(rootDir, p))
 	}
 	if err != nil {
-		fmt.Printf("Could not open %s: %s\n", path, err.Error())
+		fmt.Printf("Could not open %s: %s\n", p, err.Error())
 		return nil
 	}
 	hsh, err := imagehash.DhashHorizontal(img, int(config.HashSize))
 	if err != nil {
-		fmt.Printf("Could not hash %s: %s\n", path, err.Error())
+		fmt.Printf("Could not hash %s: %s\n", p, err.Error())
 		return nil
 	}
-	info, err := os.Stat(path)
+	info, err := os.Stat(path.Join(rootDir, p))
 	if err != nil {
 		return nil
 	}
-	hashes[path] = hashEntry{hsh, info.ModTime().Unix()}
+	hashes[p] = hashEntry{hsh, info.ModTime().Unix()}
 	return hsh
 }
 

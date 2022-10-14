@@ -42,8 +42,8 @@ func main() {
 			shouldCompress[x] = true
 		}
 	}
-	loadHashes()
 	loadSettings()
+	loadHashes()
 	hndlr := http.NewServeMux()
 	// hndlr.Handle("/login-test", NewAuthRequired(http.NotFoundHandler()))
 	hndlr.HandleFunc("/api/1/", apiHandler)
