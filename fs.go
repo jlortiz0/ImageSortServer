@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+const ENABLE_CACHE = false
+const DEFLATE_MIN = 1024
+const DEFLATE_USE = true
+
 var shouldCompress map[string]bool
 
 type FileReadOnlyHandler struct {
@@ -67,7 +71,7 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeAll(w, []byte(err.Error()))
 		return
 	}
-	if stat.IsDir() {
+	if stat.IsDir() || !stat.Mode().IsRegular() {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -77,28 +81,41 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		mtype := mime.TypeByExtension(string(h)[ind:])
 		if mtype != "" {
 			w.Header().Add("Content-Type", mtype)
-			if stat.Size() > 512 && shouldCompress[mtype] && strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
-				compress = true
-				w.Header().Add("Content-Encoding", "deflate")
+			if DEFLATE_USE {
+				ind = strings.LastIndexByte(mtype, ';')
+				if ind != -1 {
+					mtype = mtype[:ind]
+				}
+				if stat.Size() > DEFLATE_MIN && shouldCompress[mtype] && strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
+					compress = true
+					w.Header().Add("Content-Encoding", "deflate")
+				}
 			}
 		}
 	}
-	w.Header().Add("Cache-Control", "public, max-age=604800")
+	if ENABLE_CACHE {
+		w.Header().Add("Cache-Control", "public, max-age=604800")
+	} else {
+		w.Header().Add("Cache-Control", "no-cache")
+	}
 	w.Header().Add("Last-Modified", stat.ModTime().UTC().Format(time.RFC1123))
 	modSince := r.Header.Get("If-Modified-Since")
 	if modSince != "" {
 		ts, err := time.Parse(time.RFC1123, modSince)
 		if err != nil {
+			w.Header().Del("Content-Encoding")
+			w.Header().Del("Cache-Control")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		if ts.Equal(stat.ModTime().UTC()) {
+			w.Header().Del("Content-Encoding")
 			w.WriteHeader(http.StatusNotModified)
 			return
 		}
 	}
 	if r.Method == http.MethodGet {
-		if compress {
+		if DEFLATE_USE && compress {
 			w2, _ := flate.NewWriter(w, flate.DefaultCompression)
 			_, err = io.Copy(w2, f)
 			if err == nil {
@@ -112,6 +129,9 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			logError(err, OP_COPY, string(h)+"-http")
 		}
 	} else {
+		if !DEFLATE_USE || !compress {
+			w.Header().Add("Content-Length", strconv.FormatInt(stat.Size(), 10))
+		}
 		w.WriteHeader(http.StatusOK)
 	}
 }
