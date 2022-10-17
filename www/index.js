@@ -50,13 +50,13 @@ function LRButtonsMngr(props) {
 
 function ButtonsMngr(props) {
     return ReactDOM.createPortal(<div>
-        <button className="w3-button w3-gray w3-right title-bar"
+        <button className="w3-button w3-gray w3-right title-bar ui-layer2"
             onClick={props.delAction} disabled={props.curFldr == "Trash"}>D</button>
-        <button className="w3-button w3-gray w3-right title-bar"
+        <button className="w3-button w3-gray w3-right title-bar ui-layer2"
             onClick={props.sortAction}>{props.curFldr == "Sort" ? "B" : "S"}</button>
-        <button className="w3-button w3-gray w3-right title-bar"
+        <button className="w3-button w3-gray w3-right title-bar ui-layer2"
             onClick={() => document.getElementById('infoModal').style.display = 'block'}>I</button>
-        <button className="w3-button w3-gray w3-right title-bar"
+        <button className="w3-button w3-gray w3-right title-bar ui-layer2"
             onClick={props.switchAction}>O</button>
         <LRButtonsMngr sel={props.sel} laction={props.laction} raction={props.raction} max={props.max} dims={props.dims}
             isDiff={props.isDiff} diffWhich={props.diffWhich} gaction={props.gaction} />
