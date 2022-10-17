@@ -98,7 +98,7 @@ hr {
     margin: 5px 0;
 }
 
-#smallImg.animDown {
+.animDown {
     position: relative;
     animation-name: down;
     animation-duration: 0.5s;
@@ -116,7 +116,7 @@ hr {
     }
 }
 
-#smallImg.animUp {
+.animUp {
     position: relative;
     animation-name: up;
     animation-duration: 0.5s;

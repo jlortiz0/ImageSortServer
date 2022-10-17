@@ -29,11 +29,11 @@ function LargeImageMngr(props) {
 }
 
 function SmallImageMngr(props) {
+    const clss = props.flags & flagsEnum.animUp ? "animUp" : (props.flags & flagsEnum.animDown ? "animDown" : "")
     if (props.isVideo) {
-        return ReactDOM.createPortal(<video id="smallImg" src={props.sel} autoPlay controls loop muted playsInline disablePictureInPicture onAnimationEnd={props.animEnd} />,
+        return ReactDOM.createPortal(<video id="smallImg" className={clss} src={props.sel} autoPlay controls loop muted playsInline disablePictureInPicture onAnimationEnd={props.animEnd} />,
             document.getElementById("smallImgWrapper"));
     }
-    const clss = props.flags & flagsEnum.animUp ? "animUp" : (props.flags & flagsEnum.animDown ? "animDown" : "")
     return ReactDOM.createPortal(<img id="smallImg" className={clss} src={props.sel} onAnimationEnd={props.animEnd} />,
         document.getElementById("smallImgWrapper"));
 }
