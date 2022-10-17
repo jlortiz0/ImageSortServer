@@ -44,7 +44,17 @@ function LRButtonsMngr(props) {
         <button className="w3-btn w3-display-left w3-white ui-layer2" onClick={props.laction} disabled={!props.sel}>&lt;</button>
         <button className="w3-btn w3-display-right w3-white ui-layer2" onClick={props.raction} disabled={props.sel + 1 >= props.max}>&gt;</button>
         <span className="w3-text-black w3-white ui-layer2" id="dimLabel">{props.dims}</span>
-        <span className="w3-text-black w3-white ui-layer2" id="indLabel">{ds}<input onBlur={props.gaction} defaultValue={props.sel + 1} type="number" min="1" max={props.max} />/{props.max}</span>
+        <span className="w3-text-black w3-white ui-layer2" id="indLabel">
+            {ds}<input id="gotoInput" onBlur={props.gaction} defaultValue={props.sel + 1} type="number" min="1" max={props.max} onKeyDown={function (e) {
+                const elem = document.getElementById("gotoInput");
+                if (e.key == "Enter") {
+                    elem.blur();
+                } else if (e.key == "Escape") {
+                    elem.value = "";
+                    elem.blur();
+                }
+            }} />
+            /{props.max}</span>
     </div>, document.getElementById("lrButtonsMountPoint"));
 }
 
@@ -115,6 +125,7 @@ class GodObject extends React.Component {
             folderBarVisible: false,
             diffWhich: false,
         }
+        window.addEventListener('keydown', (e) => this.handleKey(e), true);
         this.populateFldrList();
     }
 
@@ -247,6 +258,11 @@ class GodObject extends React.Component {
                 if (elem == null) {
                     return;
                 }
+                elem.scrollIntoView({
+                    behavior: "auto",
+                    block: "center",
+                    inline: "center",
+                });
                 this.setState({
                     modalDims: elem.width + "x" + elem.height,
                 });
@@ -392,13 +408,88 @@ class GodObject extends React.Component {
     }
 
     handleGoto() {
-        const v = document.getElementById("indLabel").children[0];
+        const v = document.getElementById("gotoInput");
         const i = parseInt(v.value);
-        if (i != NaN) {
+        if (i != NaN && v.value != "") {
             this.addToInd(i - this.state.lsind - 1);
         } else {
             v.value = this.state.lsind + 1;
         }
+        window.focus();
+    }
+
+    handleKey(e) {
+        if (e.defaultPrevented) {
+            return;
+        }
+        switch (e.key) {
+            case "Left":
+            case "ArrowLeft":
+                if (this.state.lsind) {
+                    this.addToInd(-1);
+                }
+                break;
+            case "Right":
+            case "ArrowRight":
+                if (this.state.lsind < this.state.listing.length) {
+                    this.addToInd(1);
+                }
+                break;
+            case "Home":
+                this.setState({ lsind: 0 }, () => this.addToInd(0));
+                break;
+            case "End":
+                this.setState({ lsind: this.state.listing.length - 1 }, () => this.addToInd(0));
+                break;
+            case "c":
+                this.delCur();
+                break;
+            case "x":
+                if (this.state.curFldr != "Sort") {
+                    this.moveCur("Sort");
+                }
+                break;
+            case "z":
+                const elem = document.getElementById('infoModal');
+                if (elem.style.display == "none") {
+                    elem.style.display = "flex";
+                } else {
+                    elem.style.display = "none";
+                }
+                break;
+            case "g":
+                document.getElementById("gotoInput").focus();
+                break;
+            case "q":
+                if (this.state.isDiff) {
+                    this.diffSwap();
+                }
+                break;
+            case "Up":
+            case "ArrowUp":
+                document.getElementById("bigImg").style.display = "block";
+                break;
+            case "Down":
+            case "ArrowDown":
+                document.getElementById("bigImg").style.display = "none";
+                break;
+            case "w":
+                document.getElementById("imageModal").scrollBy(0, -10);
+                break;
+            case "s":
+                document.getElementById("imageModal").scrollBy(0, 10);
+                break;
+            case "a":
+                document.getElementById("imageModal").scrollBy(-10, 0);
+                break;
+            case "d":
+                document.getElementById("imageModal").scrollBy(10, 0);
+                break;
+            // TODO: folder bar controls, maybe switch up/down to v
+            default:
+                return;
+        }
+        e.preventDefault();
     }
 
     render() {
