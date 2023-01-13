@@ -18,7 +18,7 @@ const ENABLE_CACHE = false
 const DEFLATE_MIN = 1024
 const DEFLATE_USE = true
 
-var shouldCompress map[string]bool
+var shouldCompress map[string]struct{}
 
 type FileReadOnlyHandler struct {
 	rootDir string
@@ -86,7 +86,8 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if ind != -1 {
 					mtype = mtype[:ind]
 				}
-				if stat.Size() > DEFLATE_MIN && shouldCompress[mtype] && strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
+				_, ok := shouldCompress[mtype]
+				if stat.Size() > DEFLATE_MIN && ok && strings.Contains(r.Header.Get("Accept-Encoding"), "deflate") {
 					compress = true
 					w.Header().Add("Content-Encoding", "deflate")
 				}

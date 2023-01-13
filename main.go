@@ -28,10 +28,10 @@ func main() {
 	flag.Parse()
 	f, err := os.ReadFile(*flateTypes)
 	if err != nil {
-		shouldCompress = make(map[string]bool, 0)
+		shouldCompress = make(map[string]struct{}, 0)
 	} else {
 		data := strings.Split(string(f), "\n")
-		shouldCompress = make(map[string]bool, len(data))
+		shouldCompress = make(map[string]struct{}, len(data))
 		for _, x := range data {
 			if len(x) == 0 {
 				continue
@@ -39,7 +39,7 @@ func main() {
 			if x[len(x)-1] == '\r' {
 				x = x[:len(x)-1]
 			}
-			shouldCompress[x] = true
+			shouldCompress[x] = struct{}{}
 		}
 	}
 	loadSettings()
