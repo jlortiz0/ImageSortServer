@@ -84,7 +84,7 @@ func getDedupList(fldr string) []string {
 func initDiff(rootDir string, ls []string, fldr string) [][2]string {
 	diffLs := make([][]byte, len(ls))
 	for k, v := range ls {
-		if fldr == "" {
+		if fldr == "." {
 			diffLs[k] = getHash(v)
 		} else {
 			diffLs[k] = getHash(path.Join(fldr, v))
@@ -106,15 +106,18 @@ func initDiff(rootDir string, ls []string, fldr string) [][2]string {
 func loadHashes() error {
 	f, err := os.Open(path.Join(rootDir, "imgSort.cache"))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
+		logError(err, OP_OPEN, path.Join(rootDir, "imgSort.cache"))
 		hashes = make(map[string]hashEntry, 128)
 		return nil
 	} else if err != nil {
+		logError(err, OP_OPEN, path.Join(rootDir, "imgSort.cache"))
 		return err
 	}
 	defer f.Close()
 	reader := bufio.NewReader(f)
 	sz, _ := reader.ReadByte()
 	if sz&128 != 0 || sz != config.HashSize {
+		logError(fmt.Errorf("size mismatch: %d, expected %d", sz, config.HashSize), OP_READ, path.Join(rootDir, "imgSort.cache"))
 		hashes = make(map[string]hashEntry, 128)
 		return nil
 	}
@@ -150,12 +153,14 @@ func loadHashes() error {
 	if err == io.EOF {
 		return nil
 	}
+	logError(err, OP_READ, path.Join(rootDir, "imgSort.cache"))
 	return err
 }
 
 func saveHashes() error {
 	f, err := os.OpenFile(path.Join(rootDir, "imgSort.cache"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
+		logError(err, OP_OPEN, path.Join(rootDir, "imgSort.cache"))
 		return err
 	}
 	defer f.Close()
@@ -165,6 +170,7 @@ func saveHashes() error {
 	binary.BigEndian.PutUint32(temp, uint32(len(hashes)))
 	_, err = writer.Write(temp)
 	if err != nil {
+		logError(err, OP_WRITE, path.Join(rootDir, "imgSort.cache"))
 		return err
 	}
 	for k, v := range hashes {
@@ -173,27 +179,30 @@ func saveHashes() error {
 		}
 		_, err = writer.WriteString(k)
 		if err != nil {
+			logError(err, OP_WRITE, path.Join(rootDir, "imgSort.cache"))
 			return err
 		}
 		writer.WriteByte(0)
 		binary.BigEndian.PutUint32(temp, uint32(v.modTime))
 		_, err = writer.Write(temp)
 		if err != nil {
+			logError(err, OP_WRITE, path.Join(rootDir, "imgSort.cache"))
 			return err
 		}
 		_, err = writer.Write(v.hash)
 		if err != nil {
+			logError(err, OP_WRITE, path.Join(rootDir, "imgSort.cache"))
 			return err
 		}
 	}
-	writer.Flush()
-	return nil
+	err = writer.Flush()
+	if err != nil {
+		logError(err, OP_WRITE, path.Join(rootDir, "imgSort.cache"))
+	}
+	return err
 }
 
 func getHash(p string) []byte {
-	if os.PathSeparator != '/' {
-		p = strings.ReplaceAll(p, "/", string(os.PathSeparator))
-	}
 	hash, ok := hashes[p]
 	if ok {
 		info, err := os.Stat(path.Join(rootDir, p))
@@ -216,16 +225,17 @@ func getHash(p string) []byte {
 		img, err = imagehash.OpenImg(path.Join(rootDir, p))
 	}
 	if err != nil {
-		fmt.Printf("Could not open %s: %s\n", p, err.Error())
+		logError(err, OP_OPEN, p)
 		return nil
 	}
 	hsh, err := imagehash.DhashHorizontal(img, int(config.HashSize))
 	if err != nil {
-		fmt.Printf("Could not hash %s: %s\n", p, err.Error())
+		logError(err, OP_READ, p)
 		return nil
 	}
 	info, err := os.Stat(path.Join(rootDir, p))
 	if err != nil {
+		logError(err, OP_STAT, p)
 		return nil
 	}
 	hashes[p] = hashEntry{hsh, info.ModTime().Unix()}
