@@ -485,7 +485,7 @@ class GodObject extends React.Component {
             case "d":
                 document.getElementById("imageModal").scrollBy(10, 0);
                 break;
-            // TODO: folder bar controls, maybe switch up/down to v
+            // TODO: folder bar/menu bar controls, maybe switch up/down to v
             default:
                 return;
         }

@@ -35,6 +35,7 @@ hr {
     left: 50%;
     transform: translate(-50%, 0);
     overflow: hidden;
+    display: none;
 }
 
 .ui-layer2 {
