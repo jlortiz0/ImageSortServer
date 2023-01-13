@@ -17,6 +17,7 @@ import (
 const ENABLE_CACHE = false
 const DEFLATE_MIN = 1024
 const DEFLATE_USE = true
+const ENABLE_RANGE = true
 
 var shouldCompress map[string]struct{}
 
@@ -75,6 +76,19 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	w.Header().Add("Last-Modified", stat.ModTime().UTC().Format(time.RFC1123))
+	modSince := r.Header.Get("If-Modified-Since")
+	if modSince != "" {
+		ts, err := time.Parse(time.RFC1123, modSince)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if !ts.Before(stat.ModTime().UTC()) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
 	compress := false
 	ind := strings.LastIndexByte(string(h), '.')
 	if ind != -1 {
@@ -94,44 +108,57 @@ func (h SpecificFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if ENABLE_CACHE {
+	if ENABLE_CACHE && r.Header.Get("Pragma") != "no-cache" {
 		w.Header().Add("Cache-Control", "public, max-age=604800")
 	} else {
 		w.Header().Add("Cache-Control", "no-cache")
 	}
-	w.Header().Add("Last-Modified", stat.ModTime().UTC().Format(time.RFC1123))
-	modSince := r.Header.Get("If-Modified-Since")
-	if modSince != "" {
-		ts, err := time.Parse(time.RFC1123, modSince)
-		if err != nil {
-			w.Header().Del("Content-Encoding")
-			w.Header().Del("Cache-Control")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if ts.Equal(stat.ModTime().UTC()) {
-			w.Header().Del("Content-Encoding")
-			w.WriteHeader(http.StatusNotModified)
-			return
+	sz := stat.Size()
+	if ENABLE_RANGE {
+		w.Header().Set("Accept-Ranges", "bytes")
+		s := r.Header.Get("Content-Range")
+		if strings.HasPrefix(s, "bytes ") && len(s) > 6 && s[6] != '*' {
+			s = s[6:]
+			ind := strings.IndexByte(s, '/')
+			if ind != -1 {
+				s = s[:ind]
+			}
+			ind = strings.IndexByte(s, '-')
+			if ind != -1 {
+				s2 := s[ind+1:]
+				s = s[:ind]
+				seekTo, err := strconv.ParseInt(s, 10, 64)
+				if err == nil {
+					sz2, err := strconv.ParseInt(s2, 10, 64)
+					if sz2 > sz || s2[0] == '*' {
+						sz2 = sz
+						err = nil
+					}
+					if err == nil && sz2 >= seekTo {
+						sz = sz2 - seekTo
+						f.Seek(seekTo, 0)
+					}
+				}
+			}
 		}
 	}
 	if r.Method == http.MethodGet {
-		if DEFLATE_USE && compress {
+		if DEFLATE_USE && compress && sz > 0 {
 			w2, _ := flate.NewWriter(w, flate.DefaultCompression)
-			_, err = io.Copy(w2, f)
+			_, err = io.CopyN(w2, f, sz)
 			if err == nil {
 				err = w2.Flush()
 			}
 		} else {
-			w.Header().Add("Content-Length", strconv.FormatInt(stat.Size(), 10))
-			_, err = io.Copy(w, f)
+			w.Header().Add("Content-Length", strconv.FormatInt(sz, 10))
+			_, err = io.CopyN(w, f, sz)
 		}
 		if err != nil {
 			logError(err, OP_COPY, string(h)+"-http")
 		}
 	} else {
 		if !DEFLATE_USE || !compress {
-			w.Header().Add("Content-Length", strconv.FormatInt(stat.Size(), 10))
+			w.Header().Add("Content-Length", strconv.FormatInt(sz, 10))
 		}
 		w.WriteHeader(http.StatusOK)
 	}
