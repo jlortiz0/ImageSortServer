@@ -25,6 +25,8 @@ func main() {
 	flateTypes := flag.String("flate", "flate.types", "file containing list of types to deflate")
 	flag.StringVar(&rootDir, "r", defaultRootDir, "root directory that contains your folders")
 	www := flag.String("w", "www", "directory to serve html from")
+	keyFile := flag.String("k", "imgSort.key", "keyfile for https")
+	certFile := flag.String("c", "imgSort.crt", "certificate for https")
 	flag.Parse()
 	f, err := os.ReadFile(*flateTypes)
 	if err != nil {
@@ -63,7 +65,15 @@ func main() {
 		os.Mkdir(path.Join(rootDir, "Trash"), 0600)
 	}
 	srv := &http.Server{ReadHeaderTimeout: time.Second * 5, Handler: hndlr}
-	go srv.ListenAndServe()
+	_, err = os.Stat(*keyFile)
+	if err == nil {
+		_, err = os.Stat(*certFile)
+	}
+	if err == nil {
+		go srv.ListenAndServeTLS(*certFile, *keyFile)
+	} else {
+		go srv.ListenAndServe()
+	}
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	<-ch

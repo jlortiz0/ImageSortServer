@@ -3,3 +3,5 @@ root/**
 *.log
 *.bak
 .vscode/**
+*.crt
+*.key
