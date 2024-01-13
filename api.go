@@ -21,16 +21,6 @@ var dupOpers map[uint64]chan [][2]string = make(map[uint64]chan [][2]string)
 var dupLock *sync.Mutex = new(sync.Mutex)
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodDelete || r.Method == http.MethodPost {
-		w.Header().Add("Allow", "GET, PUT")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if r.Method != http.MethodGet && r.Method != http.MethodPut {
-		w.Header().Add("Allow", "GET, PUT, DELETE, POST, CREATE")
-		w.WriteHeader(http.StatusNotImplemented)
-		return
-	}
 	url := strings.Split(r.URL.Path, "/")
 	if url[0] == "" {
 		url = url[3:]

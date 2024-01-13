@@ -267,7 +267,7 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case "CREATE":
 		// A bit odd that this isn't defined by http...
-		err := os.Mkdir(loc, 0600)
+		err := os.Mkdir(loc, 0700)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			w.WriteHeader(http.StatusInternalServerError)
 			writeAll(w, []byte(err.Error()))
@@ -286,7 +286,7 @@ func (i ImageSortRootMount) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNoContent)
 			}
 			// On the off chance that it did actually get removed, I should try to remake it
-			os.Mkdir(loc, 0600)
+			os.Mkdir(loc, 0700)
 			return
 		}
 		stat, err := os.Stat(loc)

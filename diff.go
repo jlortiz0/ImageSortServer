@@ -90,7 +90,7 @@ func initDiff(rootDir string, ls []string, fldr string) [][2]string {
 			diffLs[k] = getHash(path.Join(fldr, v))
 		}
 	}
-	diffList := make([][2]string, len(diffLs)/32)
+	diffList := make([][2]string, 0, len(diffLs)/32)
 	for i, v := range diffLs {
 		j := i + 1
 		for j < len(diffLs) {
