@@ -1,0 +1,74 @@
+API defs:
+json reply format
+In all cases, 405, 500, and 501 are possible replies.
+
+GET /api/1/list
+Replies with array of folders
+Codes: 200
+
+GET /api/1/list/:fldr:
+Replies with array of images in formats specified by request's Accept
+Should the server have a default Accept if the client does not provide one? If not reply with 416.
+Codes: 200, 404, 416
+
+GET /:fldr:/:img:
+Replies with image data, regardless of Accept
+Should specify type of data in headers
+Codes: 200, 304, 308, 404
+404 could mean file or folder doesn't exist
+
+DELETE /:fldr:/:img:
+Sends to trash if this is not the trash.
+Should I allow trash single deletion? Probably not.
+Should deleting a non-existing resource be allowed?
+404 if folder doesn't exist, 204 if file doesn't exist.
+Codes: 204, 404
+
+POST /:fldr:/:img:
+Body: :fldr2:
+Moves :img: to fldr2.
+On success, leave new path in Link as this may differ.
+Server may temporarily "remember" this move and send 308 to any requesting clients.
+Codes: 201, 400, 404, 411
+
+DELETE /:fldr:
+Deletes the folder if it is empty.
+If it is not empty, server should send 412.
+Codes: 204, 404, 412
+
+GET /api/1/dedup/:fldr:[?token=...]
+Replies with array of pairs of strings.
+Each pair is believed to be a duplicate.
+If this will take time to process, a continuance token will be returned with 202.
+Making the request again with a query will try to look up the operation associated with the token.
+200 if done, 202 if not done, 500 if failed.
+Once the "done" result is sent, it is erased from the server's memory.
+A request with a non-existent token will get 400.
+Codes: 200, 202, 400, 404
+
+GET /api/1/dedup
+Like the previous one, but for all folders.
+Returned strings will contain path separators.
+The server may choose to arrange the array so that Sort images are always second when possible.
+Codes: 200
+
+GET /api/1/info/:fldr:
+Mainly returns if the folder exists or not.
+I might also add the size of the folder and how many items it contains.
+The result of /:fldr: may be less than this number of items.
+Codes: 204, 404
+
+GET /api/1/info/:fldr:/:img:
+Returns size and dimensions?
+Codes: 200, 404, 410
+
+PUT /api/1/info Body: rsc1,rsc2... url-encoded
+Returns array of info objects, one for each item.
+Unsure how to handle errors here. Maybe this endpoint is a bad idea?
+Codes: 200, 404, 411
+
+GET /api/1/settings
+PUT /api/1/settings
+Self-explanatory. Only settings defined by the PUT will be modified.
+If the PUT contains unrecognized fields, 422 will be sent.
+Codes: 200, 204, 411, 422
